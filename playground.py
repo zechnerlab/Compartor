@@ -14,7 +14,7 @@ checkSimpleCompartment(Compartment(X))
 w = getSumMassAction({Compartment(X):1, Compartment(Y):1}, 1)
 print(w)
 
-w = getSumMassAction({Compartment(X):1}, Y)
+w = getSumMassAction({Compartment(X):1})
 print(w)
 
 # C = Context(2)

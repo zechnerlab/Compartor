@@ -63,35 +63,7 @@ def __checkSimpleCompartment(expr):
             "Only compartments comprising a singe content variable are supported (not '" + str(expr) + "')")
 
 # -------------------------------------------------
-def __getMassAction(compartments):
-    """
-    Build w(n;Xc)
-
-    Can handle [x], n*[x], and [x] + [y], where n is an integer, and x, y are compartment content variables
-
-    :param dict compartments: maps Compartment to number of occurrences
-    :return: mass action term w(n;Xc)
-    """
-    if len(compartments) == 0:
-        return 1
-    elif len(compartments) == 1:
-        (compartment, count) = next(iter(compartments.items()))
-        __checkSimpleCompartment(compartment)
-        return 1 / factorial(count) * ff(n(compartment), count)
-    elif len(compartments) == 2:
-        i = iter(compartments.items())
-        (compartment1, count1) = next(i)
-        (compartment2, count2) = next(i)
-        __checkSimpleCompartment(compartment1)
-        __checkSimpleCompartment(compartment2)
-        if count1 != 1 or count2 != 1:
-            raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
-        return n(compartment1) * (n(compartment2) - __kronecker(compartment1, compartment2))
-    else:
-        raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
-
-# -------------------------------------------------
-def getSumMassAction(compartments, expr):
+def __getSumMassAction(compartments, expr):
     """
     Get sum_Xc(w(n;Xc)*expr)
     :param dict compartments: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
@@ -130,5 +102,5 @@ def getSumMassAction(compartments, expr):
 def checkSimpleCompartment(expr):
     __checkSimpleCompartment(expr)
 
-def getMassAction(compartments):
-    return __getMassAction(compartments)
+def getSumMassAction(compartments, expr=1):
+    return __getSumMassAction(compartments, expr)
