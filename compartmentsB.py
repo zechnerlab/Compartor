@@ -1,6 +1,8 @@
 from sympy import *
 import collections
 import itertools
+# from sympy import Function, Add, Mul, Integer, IndexedBase, factorial, ff, KroneckerDelta, Expr
+
 
 # -------------------------------------------------
 def ContentVar(name):
@@ -37,7 +39,6 @@ class CompartmentSum(Expr):
         lexpr = printer.doprint(self.expr)
         lvar = printer.doprint(self.var)
         return '\sum_{' + lvar + ' \in \mathbb{X}}' + lexpr
-
 
 # -------------------------------------------------
 __numCompartments = Function('n', integer=True)
@@ -90,9 +91,45 @@ def __getSumMassAction(compartments, expr):
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
+# -------------------------------------------------
+class ContentChange(Function):
+    def __str__(self):
+        return f'{self.args}'
 
+    def _sympystr(self, printer=None):
+        return f'{self.args}'
 
+    def _latex(self, printer=None):
+        return printer.doprint(self.args)
 
+# -------------------------------------------------
+def __getContentPerSpecies(content, D):
+    """
+    Get an array of scalars representing compartment content for species [0,D)
+
+    For example,
+        getContentPerSpecies(ContentVar('X') + ContentChange(0,-1,1), 3)
+    returns
+        [X[0], X[1] - 1, X[2] + 1]
+
+    :param Expr content: the content of the compartment, comprising ContentVars, ContentChanges, sums of those, and multiplication by integers
+    :param int D: the number of species
+    :returns: list of scalar contents for species [0,D)
+    """
+    if content.func == Add:
+        xs = [__getContentPerSpecies(arg, D) for arg in content.args]
+        return [Add(*x) for x in zip(*xs)]
+    elif content.func == Mul:
+        xs = [__getContentPerSpecies(arg, D) for arg in content.args]
+        return [Mul(*x) for x in zip(*xs)]
+    elif content.func == IndexedBase:
+        return [content[i] for i in range(D)]
+    elif content.func == ContentChange:
+        return [content.args[i] for i in range(D)]
+    elif issubclass(content.func, Integer):
+        return [content] * D
+    else:
+        raise TypeError("Unexpected expression " + str(content))
 
 
 
@@ -104,3 +141,6 @@ def checkSimpleCompartment(expr):
 
 def getSumMassAction(compartments, expr=1):
     return __getSumMassAction(compartments, expr)
+
+def getContentPerSpecies(content, D):
+    return __getContentPerSpecies(content, D)
