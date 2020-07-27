@@ -18,7 +18,7 @@ w = getSumMassAction({Compartment(X):1})
 print(w)
 
 
-print("\n==========================\n")
+print("\n==========================\ngetContentPerSpecies\n")
 
 
 X = ContentVar('X')
@@ -28,7 +28,7 @@ content_per_species = getContentPerSpecies(X + chng, 3)
 print(content_per_species)
 
 
-print("\n==========================\n")
+print("\n==========================\nmpow\n")
 
 
 gamma = IndexedBase('\gamma', integer=True, shape=1)
@@ -43,13 +43,13 @@ expr = expr.expand()
 print(expr)
 
 
-print("\n==========================\n")
+print("\n==========================\ndeltaM, substituteGamma\n")
 
 
 X = ContentVar('X')
 Y = ContentVar('Y')
 
-expr = deltaM({Compartment(X):-1, Compartment(X+chng):1}, 3)
+expr = deltaM({Compartment(X):1}, {Compartment(X+chng):1}, 3)
 print(expr)
 
 expr = substituteGamma(expr, 0, 1, 1)
@@ -59,10 +59,24 @@ expr = expr.expand()
 print(expr)
 
 
-print("\n==========================\n")
+print("\n==========================\nlhs\n")
 
 
-print_latex(Moment(0,1))
+print(lhs(1))
+
+
+print("\n==========================\nyexp, rhs\n")
+
+
+X = ContentVar('X')
+reactants = {Compartment(X):1}
+products = {Compartment(X + ContentChange(-1)):1}
+k_d = symbols('k_d')
+g_d = X[0]
+pi_d = 1
+
+print(f'yexp = {yexp(reactants, products, pi_d, 1)}')
+print(f'rhs = {rhs(reactants, products, k_d, g_d, pi_d, 1)}')
 
 # C = Context(2)
 #

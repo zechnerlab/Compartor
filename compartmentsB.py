@@ -70,23 +70,23 @@ def __checkSimpleCompartment(expr):
 
 
 # -------------------------------------------------
-def __getSumMassAction(compartments, expr):
+def __getSumMassAction(reactants, expr):
     """
     Get sum_Xc(w(n;Xc)*expr).
 
-    :param dict compartments: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
+    :param dict reactants: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
     :param expr: expression in the sum
     :return: sum_Xc(w(n;Xc)*expr)
     """
-    if len(compartments) == 0:
+    if len(reactants) == 0:
         return expr
-    elif len(compartments) == 1:
-        (compartment, count) = next(iter(compartments.items()))
+    elif len(reactants) == 1:
+        (compartment, count) = next(iter(reactants.items()))
         __checkSimpleCompartment(compartment)
         w = 1 / factorial(count) * ff(n(compartment), count)
         return CompartmentSum(w*expr, compartment.content())
-    elif len(compartments) == 2:
-        i = iter(compartments.items())
+    elif len(reactants) == 2:
+        i = iter(reactants.items())
         (compartment1, count1) = next(i)
         (compartment2, count2) = next(i)
         __checkSimpleCompartment(compartment1)
@@ -180,7 +180,7 @@ def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1))
 
 
 # -------------------------------------------------
-def __deltaM(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+def __deltaMCompartments(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     """
     Compute delta M^gamma term for the given compartments.
 
@@ -195,6 +195,24 @@ def __deltaM(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)
         return 0
     else:
         return Add(*[__deltaMContent(cmp, D, gamma) * w for (cmp, w) in compartments.items()])
+
+
+# -------------------------------------------------
+def __deltaM(reactants, products, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+
+    :param dict reactants: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
+    :param dict products: product compartments Yc as a dictionary that maps Compartment to number of occurrences
+    :param int D: the number of species
+    :param Expr gamma: optional symbol to use for gamma
+    :return:
+    """
+    compartments = collections.defaultdict(int)
+    for (compartment, count) in reactants.items():
+        compartments[compartment] -= count
+    for (compartment, count) in products.items():
+        compartments[compartment] += count
+    return __deltaMCompartments(compartments, D, gamma)
 
 
 # -------------------------------------------------
@@ -245,6 +263,21 @@ class Expectation(Function):
         return '\\left< ' + printer.doprint(self.args[0]) + '\\right> '
 
 
+# -------------------------------------------------
+def yexp(reactants, products, pi_c, *gamma ):
+    """
+    TODO
+    :param reactants:
+    :param products:
+    :param pi_c:
+    :param gamma:
+    :return:
+    """
+    # TODO:
+    #  This doesn't compute any expectation or consider pi_c distribution yet
+    yexp = deltaM(reactants, products, 1) * pi_c
+    yexp = substituteGamma(yexp, *gamma)
+    return yexp
 
 
 
@@ -262,8 +295,18 @@ def getContentPerSpecies(content, D):
 def mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     return __mpow(content_per_species, gamma)
 
-def deltaM(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
-    return __deltaM(compartments, D, gamma)
+def deltaM(reactants, products, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    return __deltaM(reactants, products, D, gamma)
 
 def substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     return __substituteGamma(expr, *args, gamma)
+
+
+# temporary functions for playground display
+
+def lhs(*gamma):
+    t=symbols('t')
+    return Derivative(Expectation(Moment(*gamma)), t)
+
+def rhs(reactants, products, k_c, g_c, pi_c, *gamma ):
+    return k_c * Expectation(getSumMassAction(reactants, g_c * yexp(reactants, products, pi_c, *gamma)))
