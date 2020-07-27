@@ -8,6 +8,7 @@ import itertools
 def ContentVar(name):
     return IndexedBase(name, integer=True, shape=1)
 
+
 # -------------------------------------------------
 class Compartment(Function):
     nargs = 1
@@ -23,6 +24,7 @@ class Compartment(Function):
 
     def content(self):
         return self.args[0]
+
 
 # -------------------------------------------------
 class CompartmentSum(Expr):
@@ -40,6 +42,7 @@ class CompartmentSum(Expr):
         lvar = printer.doprint(self.var)
         return '\sum_{' + lvar + ' \in \mathbb{X}}' + lexpr
 
+
 # -------------------------------------------------
 __numCompartments = Function('n', integer=True)
 
@@ -47,6 +50,7 @@ def n(content):
     if content.func == Compartment:
         return n(content.args[0])
     return __numCompartments(content)
+
 
 # -------------------------------------------------
 def __kronecker(content1, content2):
@@ -56,12 +60,14 @@ def __kronecker(content1, content2):
         return __kronecker(content1, content2.args[0])
     return KroneckerDelta(content1, content2)
 
+
 # -------------------------------------------------
 def __checkSimpleCompartment(expr):
     """Checks that expr is a Compartment(IndexedBase) and throws TypeError if it is not"""
     if not (expr.func == Compartment and len(expr.args) == 1 and expr.args[0].func == IndexedBase):
         raise TypeError(
             "Only compartments comprising a singe content variable are supported (not '" + str(expr) + "')")
+
 
 # -------------------------------------------------
 def __getSumMassAction(compartments, expr):
@@ -91,6 +97,7 @@ def __getSumMassAction(compartments, expr):
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
+
 # -------------------------------------------------
 class ContentChange(Function):
     def __str__(self):
@@ -101,6 +108,7 @@ class ContentChange(Function):
 
     def _latex(self, printer=None):
         return printer.doprint(self.args)
+
 
 # -------------------------------------------------
 def __getContentPerSpecies(content, D):
