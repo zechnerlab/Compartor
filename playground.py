@@ -58,6 +58,12 @@ print(expr)
 expr = expr.expand()
 print(expr)
 
+
+print("\n==========================\n")
+
+
+print_latex(Moment(0,1))
+
 # C = Context(2)
 #
 # Exit = Transition(C.compartment(X), EmptySet())
