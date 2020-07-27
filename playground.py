@@ -33,12 +33,7 @@ print("\n==========================\n")
 
 gamma = IndexedBase('\gamma', integer=True, shape=1)
 
-
-# def __mpow(content_per_species, gamma):
-#     return Mul(*[content_per_species[i] ** gamma[i] for i in range(len(content_per_species))])
-
 expr = mpow(content_per_species, gamma)
-#expr = mpow(content_per_species)
 print(expr)
 
 expr = expr.subs({gamma[0]:0, gamma[1]:2, gamma[2]:0})
@@ -47,6 +42,21 @@ print(expr)
 expr = expr.expand()
 print(expr)
 
+
+print("\n==========================\n")
+
+
+X = ContentVar('X')
+Y = ContentVar('Y')
+
+expr = deltaM({Compartment(X):-1, Compartment(X+chng):1}, 3)
+print(expr)
+
+expr = substituteGamma(expr, 0, 1, 1)
+print(expr)
+
+expr = expr.expand()
+print(expr)
 
 # C = Context(2)
 #

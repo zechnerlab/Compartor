@@ -72,7 +72,8 @@ def __checkSimpleCompartment(expr):
 # -------------------------------------------------
 def __getSumMassAction(compartments, expr):
     """
-    Get sum_Xc(w(n;Xc)*expr)
+    Get sum_Xc(w(n;Xc)*expr).
+
     :param dict compartments: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
     :param expr: expression in the sum
     :return: sum_Xc(w(n;Xc)*expr)
@@ -152,6 +153,64 @@ def __mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=
     return Mul(*[content_per_species[i] ** gamma[i] for i in range(len(content_per_species))])
 
 
+# -------------------------------------------------
+def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    Compute delta M^gamma contribution fro the given compartment content expr.
+
+    :param Expr expr: the content of the compartment, comprising ContentVars, ContentChanges, sums of those, and multiplication by integers
+    :param int D: the number of species
+    :param Expr gamma: optional symbol to use for gamma
+    :return:
+    """
+    if expr.func == Compartment:
+        content = expr.args[0]
+        species = __getContentPerSpecies(content, D)
+        return __mpow(species, gamma)
+    elif expr.func == EmptySet:
+        return 0
+    elif expr.func == Integer:
+        return expr
+    elif expr.func == Add:
+        return Add(*[__deltaMContent(i) for i in expr.args])
+    elif expr.func == Mul:
+        return Mul(*[__deltaMContent(i) for i in expr.args])
+    else:
+        raise TypeError("Unexpected expression " + str(expr))
+
+
+# -------------------------------------------------
+def __deltaM(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    Compute delta M^gamma term for the given compartments.
+
+    Weights: Each lhs (Xc) occurrence counts -1. Each rhs (Yc) occurrence counts +1.
+
+    :param dict compartments: reactant and product compartments as a dictionary that maps Compartment to weight.
+    :param int D: the number of species
+    :param Expr gamma: optional symbol to use for gamma
+    :return:
+    """
+    if len(compartments) == 0:
+        return 0
+    else:
+        return Add(*[__deltaMContent(cmp, D, gamma) * w for (cmp, w) in compartments.items()])
+
+
+# -------------------------------------------------
+def __substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    Substitute gamma[i] by args[i] in expression.
+
+    :param Expr expr: expression
+    :param args: entries of the gamma vector
+    :param Expr gamma: optional symbol to use for gamma
+    :return: expr with gamma[i] substituted by args[i]
+    """
+    return expr.subs({gamma[i]: args[i] for i in range(len(args))})
+
+
+
 
 
 # temporary export for playground
@@ -167,3 +226,9 @@ def getContentPerSpecies(content, D):
 
 def mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     return __mpow(content_per_species, gamma)
+
+def deltaM(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    return __deltaM(compartments, D, gamma)
+
+def substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    return __substituteGamma(expr, *args, gamma)
