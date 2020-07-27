@@ -140,6 +140,18 @@ def __getContentPerSpecies(content, D):
         raise TypeError("Unexpected expression " + str(content))
 
 
+# -------------------------------------------------
+def __mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    Get mul_(i=0..D)(x_i^gamma_i)
+
+    :param content_per_species: list of compartment contents for species [0,D)
+    :param Expr gamma: optional symbol to use for gamma
+    :return: scalar expression for mul_(i=0..D)(x_i^gamma_i)
+    """
+    return Mul(*[content_per_species[i] ** gamma[i] for i in range(len(content_per_species))])
+
+
 
 
 # temporary export for playground
@@ -152,3 +164,6 @@ def getSumMassAction(compartments, expr=1):
 
 def getContentPerSpecies(content, D):
     return __getContentPerSpecies(content, D)
+
+def mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    return __mpow(content_per_species, gamma)

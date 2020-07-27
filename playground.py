@@ -24,15 +24,29 @@ print("\n==========================\n")
 X = ContentVar('X')
 chng = ContentChange(0,-1,1)
 
-print(getContentPerSpecies(ContentVar('X') + ContentChange(0,-1,1), 3))
+content_per_species = getContentPerSpecies(X + chng, 3)
+print(content_per_species)
 
 
 print("\n==========================\n")
 
 
 gamma = IndexedBase('\gamma', integer=True, shape=1)
-expr = (X+chng)**gamma
+
+
+# def __mpow(content_per_species, gamma):
+#     return Mul(*[content_per_species[i] ** gamma[i] for i in range(len(content_per_species))])
+
+expr = mpow(content_per_species, gamma)
+#expr = mpow(content_per_species)
 print(expr)
+
+expr = expr.subs({gamma[0]:0, gamma[1]:2, gamma[2]:0})
+print(expr)
+
+expr = expr.expand()
+print(expr)
+
 
 # C = Context(2)
 #
