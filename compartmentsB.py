@@ -233,13 +233,21 @@ class Moment(Function):
     def __str__(self):
         return f'Moment{self.args}'
 
-    def _latex(self, printer=None):
+    def _latex(self, printer=None, exp=1):
+        b = self.__base_latex(printer=printer)
+        if exp == 1:
+            return b
+        else:
+            return '{\\left(' + b + '\\right)}^{' + printer.doprint(exp) + '}'
+
+    def __base_latex(self, printer=None):
         if len(self.args) == 0:
             return 'M^{\gamma}'
         elif len(self.args) == 1:
             return 'M^{' + printer.doprint(self.args[0]) + '}'
         else:
             return 'M^{\\left(' + ", ".join([printer.doprint(arg) for arg in self.args]) + '\\right)}'
+
 
 
 # -------------------------------------------------
