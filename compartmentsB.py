@@ -156,7 +156,7 @@ def __mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=
 # -------------------------------------------------
 def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     """
-    Compute delta M^gamma contribution fro the given compartment content expr.
+    Compute delta M^gamma contribution for the given compartment content expr.
 
     :param Expr expr: the content of the compartment, comprising ContentVars, ContentChanges, sums of those, and multiplication by integers
     :param int D: the number of species
