@@ -271,23 +271,8 @@ class Expectation(Function):
         return '\\left< ' + printer.doprint(self.args[0]) + '\\right> '
 
 
+
 # -------------------------------------------------
-def yexp(reactants, products, pi_c, *gamma ):
-    """
-    TODO
-    :param reactants:
-    :param products:
-    :param pi_c:
-    :param gamma:
-    :return:
-    """
-    # TODO:
-    #  This doesn't compute any expectation or consider pi_c distribution yet
-    yexp = deltaM(reactants, products, 1) * pi_c
-    yexp = substituteGamma(yexp, *gamma)
-    return yexp
-
-
 
 # temporary export for playground
 
@@ -310,7 +295,25 @@ def substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, shape
     return __substituteGamma(expr, *args, gamma)
 
 
+
+# -------------------------------------------------
+
 # temporary functions for playground display
+
+def yexp(reactants, products, pi_c, *gamma ):
+    """
+    TODO
+    :param reactants:
+    :param products:
+    :param pi_c:
+    :param gamma:
+    :return:
+    """
+    # TODO:
+    #  This doesn't compute any expectation or consider pi_c distribution yet
+    yexp = deltaM(reactants, products, 1 ) * pi_c # TODO: 1 should be D!?
+    yexp = substituteGamma(yexp, *gamma)
+    return yexp
 
 def lhs(*gamma):
     t=symbols('t')
