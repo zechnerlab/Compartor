@@ -1,4 +1,7 @@
-from compartmentsB import *
+from compartmentsBase import Moment
+from sympy import Function, Add, Mul, Pow, Integer
+import itertools
+
 
 # -------------------------------------------------
 class DeltaM(Function):
@@ -45,7 +48,7 @@ def __getMoments(expr):
 
 
 # -------------------------------------------------
-def __ito(expr):
+def ito(expr):
     """
     Apply Ito's rule to a function of moments.
     :param expr: expression comprising Moments, addition, multiplication, and powers with moments only in the base
@@ -59,12 +62,10 @@ def __ito(expr):
 
 
 
-
-# -------------------------------------------------
-
-# temporary export for playground
-
-def ito(expr):
-    return __ito(expr)
-
+# --- demo ---
+if __name__ == "__main__":
+    m0 = Moment(0)
+    expr = m0*m0
+    print(expr)
+    print(ito(expr))
 
