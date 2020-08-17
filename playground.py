@@ -2,6 +2,7 @@ from sympy import *
 import collections
 import itertools
 
+from compartmentsBase import *
 from compartmentsB import *
 
 # --- main ---

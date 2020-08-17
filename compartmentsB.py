@@ -1,30 +1,8 @@
-from compartmentsBase import Moment, Expectation
+from compartmentsBase import Moment, Expectation, ContentVar, ContentChange, Compartment, n
 from sympy import *
 import collections
 import itertools
 # from sympy import Function, Add, Mul, Integer, IndexedBase, factorial, ff, KroneckerDelta, Expr
-
-
-# -------------------------------------------------
-def ContentVar(name):
-    return IndexedBase(name, integer=True, shape=1)
-
-
-# -------------------------------------------------
-class Compartment(Function):
-    nargs = 1
-
-    def __str__(self):
-        return f'[{self.args[0]}]'
-
-    def _sympystr(self, printer=None):
-        return f'[{self.args[0]}]'
-
-    def _latex(self, printer=None):
-        return '\\left[' + printer.doprint(self.args[0]) + '\\right]'
-
-    def content(self):
-        return self.args[0]
 
 
 # -------------------------------------------------
@@ -42,15 +20,6 @@ class CompartmentSum(Expr):
         lexpr = printer.doprint(self.expr)
         lvar = printer.doprint(self.var)
         return '\sum_{' + lvar + ' \in \mathbb{X}}' + lexpr
-
-
-# -------------------------------------------------
-__numCompartments = Function('n', integer=True)
-
-def n(content):
-    if content.func == Compartment:
-        return n(content.args[0])
-    return __numCompartments(content)
 
 
 # -------------------------------------------------
@@ -98,18 +67,6 @@ def __getSumMassAction(reactants, expr):
         return CompartmentSum(CompartmentSum(w/2*expr, compartment1.content()), compartment2.content())
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
-
-
-# -------------------------------------------------
-class ContentChange(Function):
-    def __str__(self):
-        return f'{self.args}'
-
-    def _sympystr(self, printer=None):
-        return f'{self.args}'
-
-    def _latex(self, printer=None):
-        return printer.doprint(self.args)
 
 
 # -------------------------------------------------
