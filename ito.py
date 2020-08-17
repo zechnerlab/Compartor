@@ -60,6 +60,55 @@ def ito(expr):
     return expr.expand()
 
 
+# -------------------------------------------------
+class MomentsMonomial(object):
+    """
+    This class represents a decomposed monomial in M^{\gamma^k} and \DeltaM^{\gamma^l}.
+    It comprises a constant k, a product of moments pM, and a product of moment updates pDM.
+    """
+    def __init__(self, k, pM, pDM):
+        self.k = k
+        self.pM = pM
+        self.pDM = pDM
+
+    def __repr__(self):
+        return f'MomentsMonomial({self.k}, {self.pM}, {self.pDM})'
+
+
+# -------------------------------------------------
+def decomposeMomentsPolynomial(expr):
+    """
+    :param expr: a polynomial in M^{\gamma^k} and \DeltaM^{\gamma^l}.
+    :return: list of monomials, each decomposed into (constant, product of Moments, product of DeltaMoments)
+    """
+    expr = expr.expand()
+    monomials = list(expr.args) if expr.func == Add else [expr]
+    result = list()
+    for monomial in monomials:
+        factors = list(monomial.args) if monomial.func == Mul else [monomial]
+        qK = 1
+        qM = 1
+        qDM = 1
+        for factor in factors:
+            if factor.func == Moment:
+                qM *= factor
+            elif factor.func == DeltaM:
+                qDM *= factor
+            elif issubclass(factor.func, Integer):
+                qK *= factor
+            elif factor.func == Pow and issubclass(factor.args[ 1 ].func, Integer):
+                if factor.args[ 0 ].func == Moment:
+                    qM *= factor
+                elif factor.args[ 0 ].func == DeltaM:
+                    qDM *=factor
+                else:
+                    raise TypeError("Unexpected expression " + str(factor))
+            else:
+                raise TypeError("Unexpected expression " + str(factor))
+        result.append(MomentsMonomial(qK, qM, qDM))
+    return result
+
+
 
 
 # --- demo ---
@@ -68,4 +117,4 @@ if __name__ == "__main__":
     expr = m0*m0
     print(expr)
     print(ito(expr))
-
+    print(decomposeMomentsPolynomial(ito(expr)))
