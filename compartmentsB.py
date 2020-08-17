@@ -7,6 +7,9 @@ import itertools
 
 # -------------------------------------------------
 class CompartmentSum(Expr):
+    """
+    Represents "\sum_{var in X} expr", where var is a content variable
+    """
     def __init__(self, expr, var):
         self.expr = expr
         self.var = var
