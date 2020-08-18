@@ -333,9 +333,12 @@ def rhs(reactants, products, k_c, g_c, pi_c, *gamma ):
 
 def __decomposeContentPolynomial(expr, x, D):
     """
-    :param expr: a polynomial in Xc.
+    Given a polynomial in Xc = {x}, decompose its monomials as (constant * prod x[i]^alpha[i])
+
+    :param expr: a polynomial in Xc = {x}.
+    :param x: content variable x
     :param D: number of species
-    :return: list of monomials, each decomposed into (constant, prod x[i]^alpha[i])
+    :return: list of monomials, each decomposed into (constant, alpha)
     """
     expr = expr.expand()
     monomials = list(expr.args) if expr.func == Add else [expr]
@@ -355,6 +358,49 @@ def __decomposeContentPolynomial(expr, x, D):
             else:
                 k *= factor
         result.append((k, alpha))
+    return result
+
+def __decomposeContentPolynomial2(expr, x, y, D):
+    """
+    Given a polynomial in Xc = {x, y}, decompose its monomials as (constant * prod x[i]^alpha[i] * prod y[i]^beta[i])
+
+    :param expr: a polynomial in Xc = {x,y}.
+    :param x: content variable x
+    :param y: content variable y
+    :param D: number of species
+    :return: list of monomials, each decomposed into (constant, alpha, beta)
+    """
+    expr = expr.expand()
+    monomials = list(expr.args) if expr.func == Add else [expr]
+    result = list()
+    for monomial in monomials:
+        factors = list(monomial.args) if monomial.func == Mul else [monomial]
+        k = 1
+        alpha = [0] * D
+        beta = [0] * D
+        for factor in factors:
+            if factor.func == Pow \
+                    and factor.args[0].func == Indexed \
+                    and issubclass(factor.args[1].func, Integer):
+                cvar = factor.args[0].args[0]
+                cidx = factor.args[0].args[1]
+                if cvar == x:
+                    alpha[cidx] = factor.args[1]
+                    continue
+                elif cvar == y:
+                    beta[cidx] = factor.args[1]
+                    continue
+            elif factor.func == Indexed:
+                cvar = factor.args[0]
+                cidx = factor.args[1]
+                if cvar == x:
+                    alpha[cidx] = 1
+                    continue
+                elif cvar == y:
+                    beta[cidx] = 1
+                    continue
+            k *= factor
+        result.append((k, alpha, beta))
     return result
 
 # TEMPORARY, this is NOT what the final case logic will look like.
@@ -381,9 +427,18 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
         checkSimpleCompartment(compartment2)
         if count1 != 1 or count2 != 1:
             raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
-        raise RuntimeError("Case Xc={x,x'} not implemented yet")
+        # case Xc=={x, x'}
+        # compartment1==[x]
+        # compartment2==[x']
+        x = compartment1.args[0]
+        x1 = compartment2.args[0]
+        monomials = __decomposeContentPolynomial2(l_n_Xc, x, x1, D)
+        replaced1 = [k/2 * Moment(*alpha) * Moment(*beta) for (k, alpha, beta) in monomials]
+        monomials = __decomposeContentPolynomial(l_n_Xc.subs(x, x1), x, D)
+        replaced2 = [k/2 * Moment(*alpha) for (k, alpha) in monomials]
+        return Add(*replaced1) - Add(*replaced2)
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
-
-
+def decomposeContentPolynomial2(expr, x, y, D):
+    return __decomposeContentPolynomial2(expr, x, y, D)
