@@ -359,7 +359,7 @@ def __decomposeContentPolynomial(expr, x, D):
 
 # TEMPORARY, this is NOT what the final case logic will look like.
 # E.g., l_n_Xc should be assembled inside here, maybe iterating over q should be done inside here, etc...
-def get_dfMdt(reactants, l_n_Xc, D):
+def get_dfMdt_contrib(reactants, l_n_Xc, D):
     if len(reactants) == 0:
         raise RuntimeError("Case Xc={} not implemented yet")
     elif len(reactants) == 1:
