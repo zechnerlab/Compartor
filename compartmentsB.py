@@ -35,6 +35,36 @@ def __kronecker(content1, content2):
 
 
 # -------------------------------------------------
+def __getCompartments(expr):
+    """
+    Extract a dictionary that maps Compartment to number of occurrences from a compartment expression.
+
+    :param expr: sum of integer multiples of Compartments. (Typically lhs or rhs of a Transition.)
+    :return: expr as a dictionary that maps Compartment to number of occurrences
+    """
+    if expr.func == Add:
+        summands = [*expr.args]
+    else:
+        summands = [expr]
+
+    compartments = collections.defaultdict(int)
+    for expr in summands:
+        if expr.func == Mul and expr.args[0].func == Integer and expr.args[1].func == Compartment:
+            count = expr.args[0]
+            compartment = expr.args[1]
+        elif expr.func == Compartment:
+            count = 1
+            compartment = expr
+        elif expr.func == EmptySet:
+            continue
+        else:
+            raise TypeError("Unexpected expression " + str(expr))
+        compartments[compartment] += count
+
+    return compartments
+
+
+# -------------------------------------------------
 def __checkSimpleCompartment(expr):
     """Checks that expr is a Compartment(IndexedBase) and throws TypeError if it is not"""
     if not (expr.func == Compartment and len(expr.args) == 1 and expr.args[0].func == IndexedBase):
@@ -143,7 +173,7 @@ def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1))
 # -------------------------------------------------
 def __deltaMCompartments(compartments, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
     """
-    Compute delta M^gamma term for the given compartments.
+    Compute \DeltaM^\gamma term for the given compartments.
 
     Weights: Each lhs (Xc) occurrence counts -1. Each rhs (Yc) occurrence counts +1.
 
@@ -192,6 +222,9 @@ def __substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, sha
 # -------------------------------------------------
 
 # temporary export for playground
+
+def getCompartments(expr):
+    return  __getCompartments(expr)
 
 def checkSimpleCompartment(expr):
     __checkSimpleCompartment(expr)
