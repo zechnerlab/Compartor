@@ -322,3 +322,68 @@ def lhs(*gamma):
 def rhs(reactants, products, k_c, g_c, pi_c, *gamma ):
     return k_c * Expectation(getSumMassAction(reactants, g_c * yexp(reactants, products, pi_c, *gamma)))
 
+
+
+
+
+
+# -------------------------------------------------
+
+# WIP
+
+def __decomposeContentPolynomial(expr, x, D):
+    """
+    :param expr: a polynomial in Xc.
+    :param D: number of species
+    :return: list of monomials, each decomposed into (constant, prod x[i]^alpha[i])
+    """
+    expr = expr.expand()
+    monomials = list(expr.args) if expr.func == Add else [expr]
+    result = list()
+    for monomial in monomials:
+        factors = list(monomial.args) if monomial.func == Mul else [monomial]
+        k = 1
+        alpha = [0] * D
+        for factor in factors:
+            if factor.func == Pow \
+                    and factor.args[0].func == Indexed \
+                    and factor.args[0].args[0] == x \
+                    and issubclass(factor.args[1].func, Integer):
+                alpha[factor.args[0].args[1]] = factor.args[1]
+            elif factor.func == Indexed and factor.args[0] == x:
+                alpha[factor.args[1]] = 1
+            else:
+                k *= factor
+        result.append((k, alpha))
+    return result
+
+# TEMPORARY, this is NOT what the final case logic will look like.
+# E.g., l_n_Xc should be assembled inside here, maybe iterating over q should be done inside here, etc...
+def get_dfMdt(reactants, l_n_Xc, D):
+    if len(reactants) == 0:
+        raise RuntimeError("Case Xc={} not implemented yet")
+    elif len(reactants) == 1:
+        (compartment, count) = next(iter(reactants.items()))
+        checkSimpleCompartment(compartment)
+        if count != 1:
+            raise RuntimeError("not implemented yet")
+        # case Xc=={x}
+        # compartment==[x]
+        x = compartment.args[0]
+        monomials = __decomposeContentPolynomial(l_n_Xc, x, D)
+        replaced = [k * Moment(*alpha) for (k, alpha) in monomials]
+        return Add(*replaced)
+    elif len(reactants) == 2:
+        i = iter(reactants.items())
+        (compartment1, count1) = next(i)
+        (compartment2, count2) = next(i)
+        checkSimpleCompartment(compartment1)
+        checkSimpleCompartment(compartment2)
+        if count1 != 1 or count2 != 1:
+            raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
+        raise RuntimeError("Case Xc={x,x'} not implemented yet")
+    else:
+        raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
+
+
+

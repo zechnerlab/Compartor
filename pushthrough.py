@@ -1,4 +1,4 @@
-from sympy import EmptySet, Add, Mul, Pow, Integer
+from sympy import EmptySet, Add, Mul, Pow, Integer, Indexed
 from compartmentsBase import *
 
 D = 1
@@ -39,7 +39,7 @@ print()
 
 from compartmentsB import getCompartments, deltaM, subsDeltaM
 
-c = 1
+c = 2
 q = 0
 
 (transition, k_c, g_c, pi_c) = transitions[c]
@@ -69,3 +69,11 @@ print()
 
 
 
+
+
+
+
+
+get_dfMdt(reactants, l_n_Xc, D)
+
+# -------------------------------------------------
