@@ -1,4 +1,4 @@
-from sympy import EmptySet
+from sympy import EmptySet, Add, Mul, Pow, Integer
 from compartmentsBase import *
 
 D = 1
@@ -37,7 +37,7 @@ print(monomials)
 print()
 
 
-from compartmentsB import getCompartments, deltaM, substituteGamma
+from compartmentsB import getCompartments, deltaM, subsDeltaM
 
 c = 1
 q = 0
@@ -47,4 +47,25 @@ q = 0
 
 reactants = getCompartments(transition.lhs)
 products = getCompartments(transition.rhs)
+
+
+DM_cj = deltaM(reactants, products, D)
+print(DM_cj)
+print()
+
+
+pDMcj = subsDeltaM(pDM, DM_cj)
+print(pDM)
+print(pDMcj)
+print()
+
+def conditional_expectation(pDMcj, pi_c):
+    return pDMcj # should be pi_c(pDMcj, ???)
+
+cexp = conditional_expectation(pDMcj, pi_c)
+l_n_Xc = k_c * k_q * pM * g_c * cexp
+print(l_n_Xc)
+print()
+
+
 

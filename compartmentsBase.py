@@ -26,6 +26,30 @@ class Moment(Function):
 
 
 # -------------------------------------------------
+class DeltaM(Function):
+    """
+    Expression for \Delta{}M^\gamma, args are the elements of \gamma
+    """
+    def __str__(self):
+        return f'DeltaM{self.args}'
+
+    def _latex(self, printer=None, exp=1):
+        b = self.__base_latex(printer=printer)
+        if exp == 1:
+            return b
+        else:
+            return '{\\left(' + b + '\\right)}^{' + printer.doprint(exp) + '}'
+
+    def __base_latex(self, printer=None):
+        if len(self.args) == 0:
+            return '\Delta{}M^{\gamma}'
+        elif len(self.args) == 1:
+            return '\Delta{}M^{' + printer.doprint(self.args[0]) + '}'
+        else:
+            return '\Delta{}M^{\\left(' + ", ".join([printer.doprint(arg) for arg in self.args]) + '\\right)}'
+
+
+# -------------------------------------------------
 class Expectation(Function):
     """
     TODO
@@ -47,7 +71,10 @@ class Expectation(Function):
 
 
 ###################################################
+#
 # Specifying transitions and propensities
+#
+###################################################
 
 
 # -------------------------------------------------

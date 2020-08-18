@@ -1,4 +1,4 @@
-from compartmentsBase import Moment, Expectation, ContentVar, ContentChange, Compartment, n
+from compartmentsBase import Moment, DeltaM, Expectation, ContentVar, ContentChange, Compartment, n
 from sympy import *
 import collections
 import itertools
@@ -220,6 +220,29 @@ def __substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, sha
 
 
 # -------------------------------------------------
+def __subsDeltaM(expr, deltaM):
+    """
+    Replace every DeltaM(g) symbol in expr by deltaM with \gamma substituted with g.
+
+    :param expr: expression containing DeltaM symbols
+    :param deltaM: expression to substitute for DeltaM (with uninstantiated \gamma)
+    :return: expr with every DeltaM(g) symbol replaced.
+    """
+    if expr.func == DeltaM:
+        return substituteGamma(deltaM, *expr.args)
+    elif expr.func == Pow:
+        return Pow(subsDeltaM(expr.args[0], deltaM), expr.args[1])
+    elif expr.func == Add:
+        return Add(*[subsDeltaM(arg, deltaM) for arg in expr.args])
+    elif expr.func == Mul:
+        return Mul(*[subsDeltaM(arg, deltaM) for arg in expr.args])
+    elif issubclass(expr.func, Integer):
+        return expr
+    else:
+        raise TypeError("Unexpected expression " + str(expr))
+
+
+# -------------------------------------------------
 
 # temporary export for playground
 
@@ -239,10 +262,37 @@ def mpow(content_per_species, gamma=IndexedBase('\gamma', integer=True, shape=1)
     return __mpow(content_per_species, gamma)
 
 def deltaM(reactants, products, D, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    TODO
+
+    :param dict reactants: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
+    :param dict products: product compartments Yc as a dictionary that maps Compartment to number of occurrences
+    :param int D: the number of species
+    :param Expr gamma: optional symbol to use for gamma
+    :return:
+    """
     return __deltaM(reactants, products, D, gamma)
 
 def substituteGamma(expr, *args, gamma=IndexedBase('\gamma', integer=True, shape=1)):
+    """
+    Substitute gamma[i] by args[i] in expression.
+
+    :param Expr expr: expression
+    :param args: entries of the gamma vector
+    :param Expr gamma: optional symbol to use for gamma
+    :return: expr with gamma[i] substituted by args[i]
+    """
     return __substituteGamma(expr, *args, gamma)
+
+def subsDeltaM(expr, deltaM):
+    """
+    Replace every DeltaM(g) symbol in expr by deltaM with \gamma substituted with g.
+
+    :param expr: expression containing DeltaM symbols
+    :param deltaM: expression to substitute for DeltaM (with uninstantiated \gamma)
+    :return: expr with every DeltaM(g) symbol replaced.
+    """
+    return __subsDeltaM(expr, deltaM)
 
 
 
@@ -271,3 +321,4 @@ def lhs(*gamma):
 
 def rhs(reactants, products, k_c, g_c, pi_c, *gamma ):
     return k_c * Expectation(getSumMassAction(reactants, g_c * yexp(reactants, products, pi_c, *gamma)))
+
