@@ -340,7 +340,7 @@ def __decomposeContentPolynomial(expr, x, D):
     :param D: number of species
     :return: list of monomials, each decomposed into (constant, alpha)
     """
-    expr = expr.expand()
+    expr = expr.factor().expand()
     monomials = list(expr.args) if expr.func == Add else [expr]
     result = list()
     for monomial in monomials:
@@ -407,7 +407,7 @@ def __decomposeContentPolynomial2(expr, x, y, D):
 # E.g., l_n_Xc should be assembled inside here, maybe iterating over q should be done inside here, etc...
 def get_dfMdt_contrib(reactants, l_n_Xc, D):
     if len(reactants) == 0:
-        raise RuntimeError("Case Xc={} not implemented yet")
+        return l_n_Xc
     elif len(reactants) == 1:
         (compartment, count) = next(iter(reactants.items()))
         checkSimpleCompartment(compartment)

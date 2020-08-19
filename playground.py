@@ -79,6 +79,13 @@ pi_d = 1
 print(f'yexp = {yexp(reactants, products, pi_d, 1)}')
 print(f'rhs = {rhs(reactants, products, k_d, g_d, pi_d, 1)}')
 
+
+from sympy.stats import *
+
+Dx = Die('Dx', sides=X[0])
+e = E(Dx)
+print(e)
+
 # C = Context(2)
 #
 # Exit = Transition(C.compartment(X), EmptySet())

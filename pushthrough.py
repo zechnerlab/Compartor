@@ -56,6 +56,7 @@ print(f'DM_cj = {DM_cj}')
 pDMcj = subsDeltaM(pDM, DM_cj)
 print(f'pDMcj = {pDMcj}')
 
+# TODO
 def conditional_expectation(pDMcj, pi_c):
     return pDMcj # should be pi_c(pDMcj, ???)
 
@@ -95,4 +96,3 @@ def get_dfMdt(transitions, fM, D):
 
 dNdt = get_dfMdt(transitions, Moment(0), 1)
 print(f'dNdt = {dNdt}')
-
