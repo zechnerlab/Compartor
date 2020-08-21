@@ -90,7 +90,9 @@ def Constant(name):
 # -------------------------------------------------
 class Pi_c(object):
     """
-    TODO
+    Represents the probability distribution \pi_c() as
+        - an expression `expr` to be used when displaying in equations (typically just a symbol \pi_c)
+        - a function `conditional_expectation` that, given an expression computes its expectation (over Y_c)
     """
 
     def __init__(self, expr, conditional_expectation):
@@ -104,8 +106,9 @@ class Pi_c(object):
 # -------------------------------------------------
 def pi_c_identity():
     """
-    TODO
-    :return:
+    Returns a Pi_c with identity conditional_expectation.
+    This can be used for Y_c = {} or, more precisely,
+    if the all content variables occurring in product compartments already occur in reactant compartments.
     """
     return Pi_c(1, lambda x: x)
 
@@ -113,11 +116,12 @@ def pi_c_identity():
 # -------------------------------------------------
 def pi_c_poisson(symbol, y, rate):
     """
-    TODO
-    :param symbol:
-    :param y:
-    :param rate:
-    :return:
+    Returns a Pi_c that is a Poisson distribution of y
+
+    :param symbol: symbol to use when displaying Pi_c in equations
+    :param y: random variable, entry in a content variable, e.g., y[0]
+    :param rate: lambda parameter of the Poisson distribution
+    :return Pi_c:
     """
     # e.g.
     # y = y[0]
@@ -133,12 +137,11 @@ def pi_c_poisson(symbol, y, rate):
 # -------------------------------------------------
 def pi_c_uniform(symbol, y, start, end):
     """
-    TODO
-    :param symbol:
-    :param y:
-    :param start:
-    :param end:
-    :return:
+    Returns a Pi_c that is a uniform distribution of y with values from start (inclusive) to end (inclusive)
+
+    :param symbol: symbol to use when displaying Pi_c in equations
+    :param y: random variable, entry in a content variable, e.g., y[0]
+    :return Pi_c:
     """
     # e.g.
     # y = y[0]
@@ -554,7 +557,7 @@ def __checkSimpleCompartment(expr):
 # -------------------------------------------------
 def get_dfMdt_contrib(reactants, l_n_Xc, D):
     """
-    TODO
+    Compute the contribution to df(M)/dt of a particular transition and a particular monomial.
 
     :param reactants:
     :param l_n_Xc:
@@ -599,12 +602,12 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
 # -------------------------------------------------
 def get_dfMdt(transitions, fM, D):
     """
-    TODO
+    Given a function of Moments f(M) and a set of transitions, compute the derivative df(M)/dt.
 
-    :param transitions:
-    :param fM:
-    :param D:
-    :return:
+    :param transitions: list of all transitions, where each transition is represented by a tuple
+        (transition, k_c, g_c, pi_c) with a Transition transition, expressions k_c and g_c, and a Pi_c pi_c
+    :param fM: a function of Moments
+    :param D: number of species
     """
     dfM = ito(fM)
     monomials = decomposeMomentsPolynomial(dfM)
