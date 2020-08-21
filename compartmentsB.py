@@ -442,3 +442,45 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
 
 def decomposeContentPolynomial2(expr, x, y, D):
     return __decomposeContentPolynomial2(expr, x, y, D)
+
+
+
+# -------------------------------------------------
+class Pi_c(object):
+    """
+    TODO
+    """
+    def __init__(self, expr, conditional_expectation):
+        self.expr = expr
+        self.conditional_expectation = conditional_expectation
+
+    def __repr__(self):
+        return f'Pi_c({self.expr}, {self.conditional_expectation})'
+
+# -------------------------------------------------
+def pi_c_identity():
+    return Pi_c(1, lambda x: x)
+
+# -------------------------------------------------
+def pi_c_poisson(symbol, y, rate):
+    # e.g.
+    # y = y[0]
+    # rate = Symbol("lambda", positive=True)
+    from sympy.stats import Poisson, E
+    def expectation(pDMcj):
+        poiss = Poisson('poiss', rate)
+        return E(pDMcj.subs(y, poiss))
+    return Pi_c(symbol, expectation)
+
+# -------------------------------------------------
+def pi_c_uniform(symbol, y, start, end):
+    # e.g.
+    # y = y[0]
+    # start = 0
+    # end = x[0]
+    def expectation(pDMcj):
+        return Sum(
+            pDMcj * 1 / (end - start + 1),
+            (y, start, end)
+        ).doit().factor().expand()
+    return Pi_c(symbol, expectation)
