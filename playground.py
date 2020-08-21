@@ -1,98 +1,64 @@
-from sympy import *
-import collections
-import itertools
+from sympy import symbols, Eq, Symbol
 
-from compartmentsBase import *
-from compartmentsB import *
+# temp helpers
+def display_hc(k,g,pi,name='c'):
+    lhs = symbols('k_' + name)
+    rhs = k
+    print(Eq(lhs,rhs,evaluate=False))
 
-# --- main ---
+    lhs = symbols('g_' + name)
+    rhs = g
+    print(Eq(lhs,rhs,evaluate=False))
 
-X = ContentVar('X')
-Y = ContentVar('Y')
-
-checkSimpleCompartment(Compartment(X))
-
-w = getSumMassAction({Compartment(X):1, Compartment(Y):1}, 1)
-print(w)
-
-w = getSumMassAction({Compartment(X):1})
-print(w)
+    lhs = symbols('\pi_' + name)
+    rhs = pi.expr
+    print(Eq(lhs,rhs,evaluate=False))
 
 
-print("\n==========================\ngetContentPerSpecies\n")
 
+# from sympy import EmptySet
+from compartments import ContentVar, ContentChange, Transition, Compartment, EmptySet
+from compartments import Constant, pi_c_poisson, pi_c_identity
 
-X = ContentVar('X')
-chng = ContentChange(0,-1,1)
+D = 1 # number of species
 
-content_per_species = getContentPerSpecies(X + chng, 3)
-print(content_per_species)
+y = ContentVar('y')
+x = ContentVar('x')
 
+# Intake
+transition_I = Transition(EmptySet(), Compartment(y))
+k_I = Constant('k_I')
+g_I = 1
+pi_I = pi_c_poisson(
+    Symbol("\pi_I", positive=True),
+    y[0],
+    Symbol("\lambda", positive=True))
 
-print("\n==========================\nmpow\n")
+# Exit
+transition_E = Transition(Compartment(x), EmptySet())
+k_E = Constant('k_E')
+g_E = 1
+pi_E = pi_c_identity()
 
+# birth
+transition_b = Transition(Compartment(x), Compartment(x + ContentChange(1)))
+k_b = Constant('k_b')
+g_b = 1
+pi_b = pi_c_identity()
 
-gamma = IndexedBase('\gamma', integer=True, shape=1)
+# death
+transition_d = Transition(Compartment(x), Compartment(x + ContentChange(-1)))
+k_d = Constant('k_d')
+g_d = x[0] # TODO x should be enough here, in case D=1.
+pi_d = pi_c_identity()
 
-expr = mpow(content_per_species, gamma)
-print(expr)
+transitions = [
+    (transition_I, k_I, g_I, pi_I),
+    (transition_E, k_E, g_E, pi_E),
+    (transition_b, k_b, g_b, pi_b),
+    (transition_d, k_d, g_d, pi_d)
+]
 
-expr = expr.subs({gamma[0]:0, gamma[1]:2, gamma[2]:0})
-print(expr)
+from compartments import Moment, get_dfMdt
 
-expr = expr.expand()
-print(expr)
-
-
-print("\n==========================\ndeltaM, substituteGamma\n")
-
-
-X = ContentVar('X')
-Y = ContentVar('Y')
-
-expr = deltaM({Compartment(X):1}, {Compartment(X+chng):1}, 3)
-print(expr)
-
-expr = substituteGamma(expr, 0, 1, 1)
-print(expr)
-
-expr = expr.expand()
-print(expr)
-
-
-print("\n==========================\nlhs\n")
-
-
-print(lhs(1))
-
-
-print("\n==========================\nyexp, rhs\n")
-
-
-X = ContentVar('X')
-reactants = {Compartment(X):1}
-products = {Compartment(X + ContentChange(-1)):1}
-k_d = symbols('k_d')
-g_d = X[0]
-pi_d = 1
-
-print(f'yexp = {yexp(reactants, products, pi_d, 1)}')
-print(f'rhs = {rhs(reactants, products, k_d, g_d, pi_d, 1)}')
-
-
-from sympy.stats import *
-
-Dx = Die('Dx', sides=X[0])
-e = E(Dx)
-print(e)
-
-# C = Context(2)
-#
-# Exit = Transition(C.compartment(X), EmptySet())
-# kExit = symbols('k_{Exit}')
-# gExit = 1
-# piExit = 1
-#
-# print(Exit)
-#
-# C.doit(Exit, (kExit, gExit, piExit))
+print(get_dfMdt(transitions, Moment(0), D))
