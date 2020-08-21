@@ -1,4 +1,4 @@
-from sympy import Function, IndexedBase, Basic, symbols
+from sympy import Function, IndexedBase, Basic, Symbol
 
 
 # -------------------------------------------------
@@ -145,7 +145,7 @@ class Transition(Basic):
 
 # -------------------------------------------------
 def Constant(name):
-    return symbols(name, real=True, positive=True, constant=True)
+    return Symbol(name, real=True, constant=True)
 
 
 # -------------------------------------------------
