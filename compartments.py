@@ -61,9 +61,12 @@ class Transition(Basic):
     Expression for a transition with lhs and rhs specifying sums of compartments
     """
 
-    def __init__(self, lhs, rhs):
-        self.lhs = lhs
-        self.rhs = rhs
+    def __new__(cls, lhs, rhs, name=None):
+        t = Basic.__new__(cls)
+        t.lhs = lhs
+        t.rhs = rhs
+        t.name = name
+        return t
 
     def __str__(self):
         return f'{self.lhs} ---> {self.rhs})'
@@ -73,7 +76,8 @@ class Transition(Basic):
         # work. See the example of ModOpWrong.
         l = printer.doprint(self.lhs)
         r = printer.doprint(self.rhs)
-        return l + '\longrightarrow{}' + r
+        arrow = '\longrightarrow{}' if self.name is None else '\overset{h_'+self.name+'}{\longrightarrow}'
+        return l + arrow + r
 
 
 ###################################################
@@ -255,7 +259,7 @@ def ito(expr):
 
 ###################################################
 #
-# NEXT
+# Computing df(M)/dt
 #
 ###################################################
 

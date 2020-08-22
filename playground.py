@@ -26,7 +26,7 @@ y = ContentVar('y')
 x = ContentVar('x')
 
 # Intake
-transition_I = Transition(EmptySet(), Compartment(y))
+transition_I = Transition(EmptySet(), Compartment(y), name='I')
 k_I = Constant('k_I')
 g_I = 1
 pi_I = pi_c_poisson(
