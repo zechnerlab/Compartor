@@ -295,11 +295,13 @@ def getCompartments(expr):
 
 
 # -------------------------------------------------
-def decomposeMomentsPolynomial(expr):
+def decomposeMomentsPolynomial(expr, strict=True):
     """
     Split a polynomial in M^{\gamma^k} and \DeltaM^{\gamma^l} into a list of monomials.
 
     :param expr: a polynomial in M^{\gamma^k} and \DeltaM^{\gamma^l}.
+    :param strict: if True, only allow integers in constant of each monomial.
+            If False, everything that is not a Moment or DeltaMoment counts as constant.
     :return: list of monomials, each decomposed as a tuple (constant, product of Moments, product of DeltaMoments)
     """
     expr = expr.expand()
@@ -324,6 +326,8 @@ def decomposeMomentsPolynomial(expr):
                     qDM *= factor
                 else:
                     raise TypeError("Unexpected expression " + str(factor))
+            elif strict is False:
+                qK *= factor
             else:
                 raise TypeError("Unexpected expression " + str(factor))
         result.append((qK, qM, qDM))

@@ -1,6 +1,6 @@
 from sympy import KroneckerDelta, factorial, ff
-from sympy import Eq, Symbol, Function
-from compartments import Compartment, __checkSimpleCompartment, getCompartments
+from sympy import Eq, Symbol, Function, Derivative, Add
+from compartments import Moment, Compartment, __checkSimpleCompartment, getCompartments, decomposeMomentsPolynomial
 from IPython.core.display import display
 
 
@@ -89,3 +89,48 @@ def display_transitions(transitions, details=False):
         display_propensity(t)
         if details is True:
             display_propensity_details(t)
+
+
+###################################################
+#
+# Displaying expected moment evolution in notebooks
+#
+###################################################
+
+# -------------------------------------------------
+class Expectation(Function):
+    """
+    just used for displaying <...>
+    """
+    nargs = 1
+
+    def __str__(self):
+        return f'E[{self.args[0]}]'
+
+    def _sympystr(self, printer=None):
+        return f'E[{self.args[0]}]'
+
+    def _latex(self, printer=None):
+        return '\\left< ' + printer.doprint(self.args[0]) + '\\right> '
+
+
+def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
+    """
+    :param expr_moment: lhs of evolution equation
+    :param expr_dfMdt: rhs of evolution equation
+    :param D: if present, Moment([0[*D) will be replaced by N
+    """
+    lhs = Derivative(Expectation(expr_moment), Symbol('t'))
+    monomials = decomposeMomentsPolynomial(expr_dfMdt, strict=False)
+    contrib = list()
+    for (k, M, DM) in monomials:
+        if M != 1:
+            M = Expectation(M)
+        if DM != 1:
+            raise RuntimeError("Did not expect any deltaM in expression." + str(expr_dfMdt))
+        contrib.append(k * M * DM)
+    rhs = Add(*contrib)
+    evolution = Eq(lhs, rhs, evaluate=False)
+    if not D is None:
+        evolution = evolution.subs(Moment(*([0] * D)),Symbol('N'))
+    display(evolution)
