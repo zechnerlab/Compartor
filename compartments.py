@@ -324,6 +324,8 @@ def decomposeMomentsPolynomial(expr, strict=True):
                     qM *= factor
                 elif factor.args[0].func == DeltaM:
                     qDM *= factor
+                elif strict is False:
+                    qK *= factor
                 else:
                     raise TypeError("Unexpected expression " + str(factor))
             elif strict is False:
@@ -631,3 +633,29 @@ def get_dfMdt(transitions, fM, D):
             dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D)
             contrib.append(dfMdt)
     return Add(*contrib)
+
+
+###################################################
+#
+# "Outer loop": get missing moments and iterate
+#
+###################################################
+
+def getRequiredMoments(dfMdt):
+    monomials = decomposeMomentsPolynomial(dfMdt, strict=False)
+    required = set()
+    for (k, M, DM) in monomials:
+        if M != 1:
+            required.add(M)
+    return required
+
+def compute_moment_evolutions(transitions, moments, D, provided=set()):
+    evolutions = list()
+    required = set()
+    for fM in moments:
+        dfMdt = get_dfMdt(transitions, fM, D)
+        evolutions.append((fM, dfMdt))
+        required = required.union(getRequiredMoments(dfMdt))
+    required = required - moments
+    required = required - provided
+    return (evolutions, required)

@@ -134,3 +134,8 @@ def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
     if not D is None:
         evolution = evolution.subs(Moment(*([0] * D)),Symbol('N'))
     display(evolution)
+
+
+def display_expected_moment_evolutions(evolutions, D=None):
+    for (fM, dfMdt) in evolutions:
+        display_expected_moment_evolution(fM, dfMdt, D)
