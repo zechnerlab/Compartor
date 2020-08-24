@@ -7,7 +7,7 @@ y = ContentVar('y')
 x = ContentVar('x')
 
 # Intake
-transition_I = Transition(EmptySet(), Compartment(y), name='I')
+transition_I = Transition(EmptySet, Compartment(y), name='I')
 k_I = Constant('k_I')
 g_I = 1
 pi_I = pi_c_poisson(
@@ -16,7 +16,7 @@ pi_I = pi_c_poisson(
     Symbol("\lambda", positive=True))
 
 # Exit
-transition_E = Transition(Compartment(x), EmptySet(), name='E')
+transition_E = Transition(Compartment(x), EmptySet, name='E')
 k_E = Constant('k_E')
 g_E = 1
 pi_E = pi_c_identity()

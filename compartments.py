@@ -285,7 +285,7 @@ def getCompartments(expr):
         elif expr.func == Compartment:
             count = 1
             compartment = expr
-        elif expr.func == EmptySet:
+        elif expr == EmptySet:
             continue
         else:
             raise TypeError("Unexpected expression " + str(expr))
@@ -392,7 +392,7 @@ def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1))
         content = expr.args[0]
         species = __getContentPerSpecies(content, D)
         return __mpow(species, gamma)
-    elif expr.func == EmptySet:
+    elif expr == EmptySet:
         return 0
     elif expr.func == Integer:
         return expr
