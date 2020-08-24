@@ -35,7 +35,7 @@ def __getWnXc(reactants):
     Get w(n;Xc)
 
     :param dict reactants: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
-    :return: sum_Xc(w(n;Xc)*expr)
+    :return: w(n;Xc)
     """
     if len(reactants) == 0:
         return 1
@@ -51,7 +51,8 @@ def __getWnXc(reactants):
         __checkSimpleCompartment(compartment2)
         if count1 != 1 or count2 != 1:
             raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
-        return __n(compartment1) * (__n(compartment2) - __kronecker(compartment1, compartment2))
+        return __n(compartment1) * (__n(compartment2) - __kronecker(compartment1, compartment2)) \
+               / ( 1 + __kronecker(compartment1, compartment2))
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
