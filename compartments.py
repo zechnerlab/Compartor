@@ -225,6 +225,36 @@ class DeltaM(Function):
 
 ###################################################
 #
+# Expectation function
+#
+###################################################
+
+# -------------------------------------------------
+class Expectation(Function):
+    """
+    just used for displaying <...>
+    """
+    nargs = 1
+
+    def __str__(self):
+        return f'E[{self.args[0]}]'
+
+    def _sympystr(self, printer=None):
+        return f'E[{self.args[0]}]'
+
+    def _latex(self, printer=None, exp=1):
+        b = self.__base_latex(printer=printer)
+        if exp == 1:
+            return b
+        else:
+            return '{' + b + '}^{' + printer.doprint(exp) + '}'
+
+    def __base_latex(self, printer=None):
+        return '\\left< ' + printer.doprint(self.args[0]) + '\\right> '
+
+
+###################################################
+#
 # Derivative of expression in Moments using Ito's rule
 #
 ###################################################

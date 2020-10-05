@@ -1,6 +1,6 @@
 from sympy import KroneckerDelta, factorial, ff
 from sympy import Eq, Symbol, Function, Derivative, Add
-from compartments import Moment, Compartment, __checkSimpleCompartment, getCompartments, decomposeMomentsPolynomial
+from compartments import Moment, Compartment, Expectation, __checkSimpleCompartment, getCompartments, decomposeMomentsPolynomial
 from IPython.core.display import display
 
 
@@ -99,22 +99,6 @@ def display_transitions(transitions, details=False):
 ###################################################
 
 # -------------------------------------------------
-class Expectation(Function):
-    """
-    just used for displaying <...>
-    """
-    nargs = 1
-
-    def __str__(self):
-        return f'E[{self.args[0]}]'
-
-    def _sympystr(self, printer=None):
-        return f'E[{self.args[0]}]'
-
-    def _latex(self, printer=None):
-        return '\\left< ' + printer.doprint(self.args[0]) + '\\right> '
-
-
 def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
     """
     :param expr_moment: lhs of evolution equation
