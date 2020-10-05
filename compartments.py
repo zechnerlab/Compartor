@@ -704,6 +704,6 @@ def compute_moment_evolutions(transitions, moments, D, provided=set()):
         dfMdt = get_dfMdt(transitions, fM, D)
         evolutions.append((fM, dfMdt))
         required = required.union(getRequiredMoments(dfMdt))
-    required = required - moments
-    required = required - provided
+    required = required - set(moments)
+    required = required - set(provided)
     return (evolutions, required)
