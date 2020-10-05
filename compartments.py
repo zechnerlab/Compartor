@@ -71,6 +71,9 @@ class Transition(Basic):
     def __str__(self):
         return f'{self.lhs} ---> {self.rhs})'
 
+    def _sympystr(self, printer=None):
+        return f'{self.lhs} ---> {self.rhs})'
+
     def _latex(self, printer=None):
         # Always use printer.doprint() otherwise nested expressions won't
         # work. See the example of ModOpWrong.
