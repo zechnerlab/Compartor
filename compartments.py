@@ -638,7 +638,7 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
         x1 = compartment2.args[0]
         monomials = __decomposeContentPolynomial2(l_n_Xc, x, x1, D)
         replaced1 = [k / 2 * Moment(*alpha) * Moment(*beta) for (k, alpha, beta) in monomials]
-        monomials = __decomposeContentPolynomial(l_n_Xc.subs(x, x1), x, D)
+        monomials = __decomposeContentPolynomial(l_n_Xc.subs(x1, x), x, D)
         replaced2 = [k / 2 * Moment(*alpha) for (k, alpha) in monomials]
         return Add(*replaced1) - Add(*replaced2)
     else:
