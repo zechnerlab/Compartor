@@ -686,6 +686,18 @@ def getRequiredMoments(dfMdt):
     return required
 
 def compute_moment_evolutions(transitions, moments, D, provided=set()):
+    """
+    Given a reaction network, moment expressions, and number of species, computes
+    a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression,
+    and the derived expression for its time derivative.
+
+    :param transitions: list of all transitions, where each transition is represented by a tuple
+        (transition, k_c, g_c, pi_c) with a Transition transition, expressions k_c and g_c, and a Pi_c pi_c
+    :param moments: a list of functions of Moments
+    :param D: number of species
+    :param provided: optional list of moment-functions whose evolutions are already known (these will not be returned as missing)
+    :return: list of pairs (fM, dfMdt)
+    """
     evolutions = list()
     required = set()
     for fM in moments:

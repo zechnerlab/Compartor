@@ -103,7 +103,7 @@ def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
     """
     :param expr_moment: lhs of evolution equation
     :param expr_dfMdt: rhs of evolution equation
-    :param D: if present, Moment([0[*D) will be replaced by N
+    :param D: if present, Moment([0]*D) will be replaced by N
     """
     lhs = Derivative(Expectation(expr_moment), Symbol('t'))
     monomials = decomposeMomentsPolynomial(expr_dfMdt, strict=False)
@@ -121,6 +121,7 @@ def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
     display(evolution)
 
 
+# -------------------------------------------------
 def display_expected_moment_evolutions(evolutions, D=None):
     for (fM, dfMdt) in evolutions:
         display_expected_moment_evolution(fM, dfMdt, D)
