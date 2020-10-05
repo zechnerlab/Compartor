@@ -194,6 +194,9 @@ class Moment(Function):
         else:
             return 'M^{\\left(' + ", ".join([printer.doprint(arg) for arg in self.args]) + '\\right)}'
 
+    def order(self):
+        return sum(self.args)
+
 
 # -------------------------------------------------
 class DeltaM(Function):
