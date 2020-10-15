@@ -500,6 +500,11 @@ class GeneratePython(AbstractCodeGenerator):
         self.append_statement('"""')
         self.append_statement('Evaluate derivatives of expected moments')
         self.append_statement('')
+        self.append_statement('Indices in M and dM vectors are ')
+        ordered = sorted(self._moment_indices.items(), key=lambda t: t[1])
+        for m, i in ordered:
+            self.append_statement(f'  M[{i}] = {m}')
+        self.append_statement('')
         self.append_statement(':param M: expected moments')
         self.append_statement(':param dM: result, the derivative dM/dt is stored here')
         self.append_statement(':param parameters: tuple of values for constants (' +
