@@ -601,6 +601,31 @@ def __checkSimpleCompartment(expr):
 
 
 # -------------------------------------------------
+def _getNumSpecies(expr):
+    """
+    Extract number of species from a moments expression.
+    Raise RuntimeError, if no Moment occurs in expr, or if occurring Moments have mismatching arities.
+    """
+    monomials = decomposeMomentsPolynomial(expr, strict=False)
+    Ds = set()
+    for (k, M, DM) in monomials:
+        if M != 1:
+            factors = list(M.args) if M.func == Mul else [M]
+            for factor in factors:
+                if factor.func == Pow and factor.args[0].func == Moment:
+                    Ds.add(len(factor.args[0].args))
+                elif factor.func == Moment:
+                    Ds.add(len(factor.args))
+    if len(Ds) == 0:
+        raise RuntimeError("Cannot determine number of species from expression." + str(expr))
+    elif len(Ds) == 1:
+        return next(iter(Ds))
+    else:
+        raise RuntimeError("Number of species in Moments occurring in expression is not unique."
+                           + str(expr) + " contains moments of orders " + str(Ds))
+
+
+# -------------------------------------------------
 def get_dfMdt_contrib(reactants, l_n_Xc, D):
     """
     Compute the contribution to df(M)/dt of a particular transition and a particular monomial.
@@ -655,6 +680,8 @@ def get_dfMdt(transitions, fM, D):
     :param fM: a function of Moments
     :param D: number of species
     """
+    if _getNumSpecies(fM) != D:
+        raise RuntimeError(f'Arities of all occurring moments should be {D}. ({fM})')
     dfM = ito(fM)
     monomials = decomposeMomentsPolynomial(dfM)
     contrib = list()
