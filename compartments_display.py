@@ -1,6 +1,6 @@
 from sympy import KroneckerDelta, factorial, ff
 from sympy import Eq, Symbol, Function, Derivative, Add
-from compartments import Moment, Compartment, Expectation, __checkSimpleCompartment, getCompartments, decomposeMomentsPolynomial
+from compartments import Moment, Compartment, Expectation, __checkSimpleCompartment, getCompartments, decomposeMomentsPolynomial, _getNumSpecies
 from IPython.core.display import display
 
 
@@ -105,6 +105,8 @@ def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
     :param expr_dfMdt: rhs of evolution equation
     :param D: if present, Moment([0]*D) will be replaced by N
     """
+    if D is None:
+        D = _getNumSpecies(expr_moment)
     lhs = Derivative(Expectation(expr_moment), Symbol('t'))
     monomials = decomposeMomentsPolynomial(expr_dfMdt, strict=False)
     contrib = list()
