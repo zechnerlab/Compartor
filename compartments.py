@@ -597,7 +597,7 @@ def __checkSimpleCompartment(expr):
     """
     if not (expr.func == Compartment and len(expr.args) == 1 and expr.args[0].func == IndexedBase):
         raise TypeError(
-            "Only compartments comprising a singe content variable are supported (not '" + str(expr) + "')")
+            "Only compartments comprising a single content variable are supported (not '" + str(expr) + "')")
 
 
 # -------------------------------------------------
