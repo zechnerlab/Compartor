@@ -104,17 +104,17 @@ def _gen_comment_text(expr, comment_species_base_index = 1):
         D = len(expr.args)
         name, i = moment_type_and_species(expr)
         if name == 'N':
-            return 'N (Number of Compartments)'
+            return 'Number of Compartments (N)'
         elif name == 'M':
             if D == 1:
-                return 'M (Total Mass)'
+                return 'Total Mass'
             else:
-                return f'M{i} (Total Mass of species {i})'
+                return f'Total Mass of species {i}'
         elif name == 'S':
             if D == 1:
-                return 'S (Sum of squared content)'
+                return 'Sum of squared content'
             else:
-                return f'S{i} (Sum of squared content of species {i})'
+                return f'Sum of squared content of species {i}'
     else:
         return moment_name(expr)
 

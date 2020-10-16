@@ -99,7 +99,7 @@ def display_transitions(transitions, details=False):
 ###################################################
 
 # -------------------------------------------------
-def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
+def display_moment_equation(expr_moment, expr_dfMdt, D=None):
     """
     :param expr_moment: lhs of evolution equation
     :param expr_dfMdt: rhs of evolution equation
@@ -124,6 +124,6 @@ def display_expected_moment_evolution(expr_moment, expr_dfMdt, D=None):
 
 
 # -------------------------------------------------
-def display_expected_moment_evolutions(evolutions, D=None):
-    for (fM, dfMdt) in evolutions:
-        display_expected_moment_evolution(fM, dfMdt, D)
+def display_moment_equations(equations, D=None):
+    for (fM, dfMdt) in equations:
+        display_moment_equation(fM, dfMdt, D)

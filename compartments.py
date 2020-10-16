@@ -712,7 +712,7 @@ def getRequiredMoments(dfMdt):
             required.add(M)
     return required
 
-def compute_moment_evolutions(transitions, moments, D, provided=set()):
+def compute_moment_equations(transitions, moments, D, provided=set()):
     """
     Given a reaction network, moment expressions, and number of species, computes
     a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression,
