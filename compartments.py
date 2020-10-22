@@ -10,10 +10,10 @@ import collections
 ###################################################
 
 # -------------------------------------------------
-def ContentVar(name):
+def Content(name):
     """
-    Create a content variable.
-    If X is a ContentVar, then X[i] refers to content for species i.
+    Create a Content variable.
+    If X is a Content variable, then X[i] refers to content for species i.
     """
     return IndexedBase(name, integer=True, shape=1)
 
@@ -21,7 +21,7 @@ def ContentVar(name):
 # -------------------------------------------------
 class ContentChange(Function):
     """
-    An integer vector that can be added to ContentVar to express chemical modifications.
+    An integer vector that can be added to a Content variable to express chemical modifications.
     args are change per species.
     """
 
@@ -378,11 +378,11 @@ def __getContentPerSpecies(content, D):
     Get an array of scalars representing compartment content for species [0,D)
 
     For example,
-        getContentPerSpecies(ContentVar('X') + ContentChange(0,-1,1), 3)
+        getContentPerSpecies(Content('X') + ContentChange(0,-1,1), 3)
     returns
         [X[0], X[1] - 1, X[2] + 1]
 
-    :param Expr content: the content of the compartment, comprising ContentVars, ContentChanges, sums of those, and multiplication by integers
+    :param Expr content: the content of the compartment, comprising Contents, ContentChanges, sums of those, and multiplication by integers
     :param int D: the number of species
     :returns: list of scalar contents for species [0,D)
     """
@@ -419,7 +419,7 @@ def __deltaMContent(expr, D, gamma=IndexedBase('\gamma', integer=True, shape=1))
     """
     Compute delta M^gamma contribution for the given compartment content expr.
 
-    :param Expr expr: the content of the compartment, comprising ContentVars, ContentChanges, sums of those, and multiplication by integers
+    :param Expr expr: the content of the compartment, comprising Contents, ContentChanges, sums of those, and multiplication by integers
     :param int D: the number of species
     :param Expr gamma: optional symbol to use for gamma
     :return:

@@ -1,10 +1,10 @@
 from sympy import Symbol
-from compartments import ContentVar, Transition, EmptySet, Compartment, Constant, pi_c_poisson, pi_c_identity, ContentChange
+from compartments import Content, Transition, EmptySet, Compartment, Constant, pi_c_poisson, pi_c_identity, ContentChange
 
 D = 1 # number of species
 
-y = ContentVar('y')
-x = ContentVar('x')
+y = Content('y')
+x = Content('x')
 
 # Intake
 transition_I = Transition(EmptySet, Compartment(y), name='I')
