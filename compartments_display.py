@@ -1,5 +1,5 @@
 from sympy import Eq, Symbol, Derivative, Add, Basic
-from compartments import Moment, Expectation, decomposeMomentsPolynomial, _getNumSpecies
+from compartments import Moment, Expectation, _getNumSpecies
 from IPython.core.display import display
 
 
@@ -61,15 +61,7 @@ def display_moment_equation(expr_moment, expr_dfMdt, D=None):
     if D is None:
         D = _getNumSpecies(expr_moment)
     lhs = Derivative(Expectation(expr_moment), Symbol('t'))
-    monomials = decomposeMomentsPolynomial(expr_dfMdt, strict=False)
-    contrib = list()
-    for (k, M, DM) in monomials:
-        if M != 1:
-            M = Expectation(M)
-        if DM != 1:
-            raise RuntimeError("Did not expect any deltaM in expression." + str(expr_dfMdt))
-        contrib.append(k * M * DM)
-    rhs = Add(*contrib)
+    rhs = expr_dfMdt
     evolution = Eq(lhs, rhs, evaluate=False)
     if not D is None:
         evolution = evolution.subs(Moment(*([0]*D)),Symbol('N'))

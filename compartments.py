@@ -818,6 +818,26 @@ def get_dfMdt(transition_classes, fM, D):
     return Add(*contrib)
 
 
+# -------------------------------------------------
+def _expectation(expr):
+    """
+    Replace each moments expression (product of moments) in monomials of expr with
+    the expectation of the moments expression.
+
+    :param expr: a polynomial in M^{\gamma^k}.
+    :return: expr with every fM replaced by Expectation(fM)
+    """
+    monomials = decomposeMomentsPolynomial(expr, strict=False)
+    contrib = list()
+    for (k, M, DM) in monomials:
+        if M != 1:
+            M = Expectation(M)
+        if DM != 1:
+            raise RuntimeError("Did not expect any deltaM in expression." + str(expr))
+        contrib.append(k * M)
+    return Add(*contrib)
+
+
 ###################################################
 #
 # "Outer loop": get missing moments and iterate
@@ -848,7 +868,7 @@ def compute_moment_equations(transition_classes, moments, D, provided=set()):
     required = set()
     for fM in moments:
         dfMdt = get_dfMdt(transition_classes, fM, D)
-        evolutions.append((fM, dfMdt))
+        evolutions.append((fM, _expectation(dfMdt)))
         required = required.union(getRequiredMoments(dfMdt))
     required = required - set(moments)
     required = required - set(provided)

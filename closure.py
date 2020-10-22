@@ -1,5 +1,5 @@
 from sympy import Add, Mul, Pow, Integer
-from compartments import Moment, Expectation, decomposeMomentsPolynomial
+from compartments import Moment, Expectation, _expectation
 import itertools
 
 
@@ -88,26 +88,6 @@ def gamma_closures(expressions):
 
 
 # -------------------------------------------------
-def __expectation(expr):
-    """
-    Replace each moments expression (product of moments) in monomials of expr with
-    the expectation of the moments expression.
-
-    :param expr: a polynomial in M^{\gamma^k}.
-    :return: expr with every fM replaced by Expectation(fM)
-    """
-    monomials = decomposeMomentsPolynomial(expr, strict=False)
-    contrib = list()
-    for (k, M, DM) in monomials:
-        if M != 1:
-            M = Expectation(M)
-        if DM != 1:
-            raise RuntimeError("Did not expect any deltaM in expression." + str(expr))
-        contrib.append(k * M)
-    return Add(*contrib)
-
-
-# -------------------------------------------------
 def expectation_and_substitute_closures(evolutions, closures):
     """
     Take expectation of rhs in evolutions, and substitute closures.
@@ -118,5 +98,5 @@ def expectation_and_substitute_closures(evolutions, closures):
     closed moments
     """
     substitutions = {Expectation(m): c for m, c in closures}
-    closed_evolutions = [(fM, __expectation(dfMdt).subs(substitutions)) for fM, dfMdt in evolutions]
+    closed_evolutions = [(fM, _expectation(dfMdt).subs(substitutions)) for fM, dfMdt in evolutions]
     return closed_evolutions
