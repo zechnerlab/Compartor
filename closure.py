@@ -88,7 +88,7 @@ def gamma_closures(expressions):
 
 
 # -------------------------------------------------
-def expectation_and_substitute_closures(evolutions, closures):
+def substitute_closures(evolutions, closures):
     """
     Take expectation of rhs in evolutions, and substitute closures.
 
@@ -98,5 +98,5 @@ def expectation_and_substitute_closures(evolutions, closures):
     closed moments
     """
     substitutions = {Expectation(m): c for m, c in closures}
-    closed_evolutions = [(fM, _expectation(dfMdt).subs(substitutions)) for fM, dfMdt in evolutions]
+    closed_evolutions = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in evolutions]
     return closed_evolutions
