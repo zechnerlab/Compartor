@@ -97,7 +97,7 @@ def Constant(name):
 
 
 # -------------------------------------------------
-class Pi_c(object):
+class OutcomeDistribution(object):
     """
     Represents the probability distribution \pi_c() as
         - an expression `expr` to be used when displaying in equations (typically just a symbol \pi_c)
@@ -109,61 +109,62 @@ class Pi_c(object):
         self.conditional_expectation = conditional_expectation
 
     def __repr__(self):
-        return f'Pi_c({self.expr}, {self.conditional_expectation})'
+        return f'OutcomeDistribution({self.expr}, {self.conditional_expectation})'
 
+    _identity = None
 
-# -------------------------------------------------
-def pi_c_identity():
-    """
-    Returns a Pi_c with identity conditional_expectation.
-    This can be used for Y_c = {} or, more precisely,
-    if the all content variables occurring in product compartments already occur in reactant compartments.
-    """
-    return Pi_c(1, lambda x: x)
+    @classmethod
+    def identity(cls):
+        """
+        Returns the OutcomeDistribution with identity conditional_expectation.
+        This can be used for Y_c = {} or, more precisely,
+        if the all content variables occurring in product compartments already occur in reactant compartments.
+        """
+        if not cls._identity:
+            cls._identity = OutcomeDistribution(1, lambda x: x)
+        return cls._identity
 
+    @classmethod
+    def poisson(cls, symbol, y, rate):
+        """
+        Returns an OutcomeDistribution that is a Poisson distribution of y
 
-# -------------------------------------------------
-def pi_c_poisson(symbol, y, rate):
-    """
-    Returns a Pi_c that is a Poisson distribution of y
+        :param symbol: symbol to use when displaying Pi_c in equations
+        :param y: random variable, entry in a content variable, e.g., y[0]
+        :param rate: lambda parameter of the Poisson distribution
+        :return Pi_c:
+        """
+        # e.g.
+        # y = y[0]
+        # rate = Symbol("lambda", positive=True)
+        from sympy.stats import Poisson, E
+        def expectation(pDMcj):
+            poiss = Poisson('poiss', rate)
+            return E(pDMcj.subs(y, poiss))
 
-    :param symbol: symbol to use when displaying Pi_c in equations
-    :param y: random variable, entry in a content variable, e.g., y[0]
-    :param rate: lambda parameter of the Poisson distribution
-    :return Pi_c:
-    """
-    # e.g.
-    # y = y[0]
-    # rate = Symbol("lambda", positive=True)
-    from sympy.stats import Poisson, E
-    def expectation(pDMcj):
-        poiss = Poisson('poiss', rate)
-        return E(pDMcj.subs(y, poiss))
+        return OutcomeDistribution(symbol, expectation)
 
-    return Pi_c(symbol, expectation)
+    @classmethod
+    def uniform(cls, symbol, y, start, end):
+        """
+        Returns an OutcomeDistribution that is a uniform distribution of y with values from start (inclusive) to end (inclusive)
 
+        :param symbol: symbol to use when displaying Pi_c in equations
+        :param y: random variable, entry in a content variable, e.g., y[0]
+        :return Pi_c:
+        """
+        # e.g.
+        # y = y[0]
+        # start = 0
+        # end = x[0]
+        from sympy import Sum
+        def expectation(pDMcj):
+            return Sum(
+                pDMcj * 1 / (end - start + 1),
+                (y, start, end)
+            ).doit().factor().expand()
 
-# -------------------------------------------------
-def pi_c_uniform(symbol, y, start, end):
-    """
-    Returns a Pi_c that is a uniform distribution of y with values from start (inclusive) to end (inclusive)
-
-    :param symbol: symbol to use when displaying Pi_c in equations
-    :param y: random variable, entry in a content variable, e.g., y[0]
-    :return Pi_c:
-    """
-    # e.g.
-    # y = y[0]
-    # start = 0
-    # end = x[0]
-    from sympy import Sum
-    def expectation(pDMcj):
-        return Sum(
-            pDMcj * 1 / (end - start + 1),
-            (y, start, end)
-        ).doit().factor().expand()
-
-    return Pi_c(symbol, expectation)
+        return OutcomeDistribution(symbol, expectation)
 
 
 ###################################################
@@ -175,12 +176,12 @@ def pi_c_uniform(symbol, y, start, end):
 # -------------------------------------------------
 class TransitionClass(Basic):
     """
-    Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the conditional probability pi
+    Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the outcome distribuiton pi
     """
 
-    def __new__(cls, transition, k, g, pi=pi_c_identity()):
+    def __new__(cls, transition, k, g, pi=OutcomeDistribution.identity()):
         t = Basic.__new__(cls)
-        if pi == pi_c_identity:
+        if pi == OutcomeDistribution.identity():
             cvl = _getContentVars(transition.lhs)
             cvr = _getContentVars(transition.rhs)
             if cvr - cvl:
