@@ -178,8 +178,15 @@ class TransitionClass(Basic):
     Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the conditional probability pi
     """
 
-    def __new__(cls, transition, k, g, pi):
+    def __new__(cls, transition, k, g, pi=pi_c_identity()):
         t = Basic.__new__(cls)
+        if pi == pi_c_identity:
+            cvl = _getContentVars(transition.lhs)
+            cvr = _getContentVars(transition.rhs)
+            if cvr - cvl:
+                raise ValueError("Please specify an OutcomeDistribution!"
+                                 " Content variables occur in products that do not occur in reactants."
+                                 " The default OutcomeDistribution cannot be applied.")
         t.transition = transition
         t.k = k
         t.g = g
@@ -208,6 +215,29 @@ class TransitionClass(Basic):
         w = _getWnXc(reactants)
         expr = self.k * self.g * self.pi.expr * w
         return printer.doprint(Eq(h_c, expr, evaluate=False))
+
+
+# -------------------------------------------------
+def _getContentVars(expr):
+    """
+    Get all the Content variables occurring in expr.
+    (This is used in TransitionClass to check whether the default OutcomeDistribution.identity() is permissible)
+
+    :param Expr expr: Compartment, Content, ContentChange, sums of those, and multiplication by integers
+    :returns: set of Content variables
+    """
+    if expr.func in [Add, Mul, Compartment, ContentChange]:
+        return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
+    elif expr.func == IndexedBase:
+        return {expr}
+    elif expr.func == Indexed:
+        return {expr.base}
+    elif expr is EmptySet:
+        return set()
+    elif issubclass(expr.func, Integer):
+        return set()
+    else:
+        raise TypeError("Unexpected expression " + str(expr))
 
 
 # -------------------------------------------------
