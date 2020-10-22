@@ -1,4 +1,5 @@
-from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer
+from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq
+from sympy import KroneckerDelta, factorial, ff
 import itertools
 import collections
 
@@ -74,13 +75,14 @@ class Transition(Basic):
     def _sympystr(self, printer=None):
         return f'{self.lhs} ---> {self.rhs}'
 
-    def _latex(self, printer=None):
+    def _latex(self, printer=None, align=False):
         # Always use printer.doprint() otherwise nested expressions won't
         # work. See the example of ModOpWrong.
         l = printer.doprint(self.lhs)
         r = printer.doprint(self.rhs)
         arrow = '\longrightarrow{}' if self.name is None else '\overset{h_'+self.name+'}{\longrightarrow}'
-        return l + arrow + r
+        alignment = '&' if align else ''
+        return l + alignment + arrow + r
 
 
 ###################################################
@@ -162,6 +164,95 @@ def pi_c_uniform(symbol, y, start, end):
         ).doit().factor().expand()
 
     return Pi_c(symbol, expectation)
+
+
+###################################################
+#
+# Specifying transitions classes
+#
+###################################################
+
+# -------------------------------------------------
+class TransitionClass(Basic):
+    """
+    Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the conditional probability pi
+    """
+
+    def __new__(cls, transition, k, g, pi):
+        t = Basic.__new__(cls)
+        t.transition = transition
+        t.k = k
+        t.g = g
+        t.pi = pi
+        return t
+
+    def __str__(self):
+        return f'TransitionClass("{self.transition.name}", {self.transition}, k={self.k}, g={self.g}, pi={self.pi})'
+
+    def _sympystr(self, printer=None):
+        t = printer.doprint(self.transition)
+        p = self._propensity_latex(printer)
+        return r"(%s, %s)" % (t,p)
+
+    def _latex(self, printer=None):
+        transition_latex = self.transition._latex(printer)
+        propensity_latex = self._propensity_latex(printer)
+        return r"%s,\:%s" % (transition_latex, propensity_latex)
+
+    def _propensity_latex(self, printer=None):
+        name = self.transition.name
+        if name is None:
+            name = ''
+        h_c = Symbol("h_{" + name + "}")
+        reactants = getCompartments(self.transition.lhs)
+        w = _getWnXc(reactants)
+        expr = self.k * self.g * self.pi.expr * w
+        return printer.doprint(Eq(h_c, expr, evaluate=False))
+
+
+# -------------------------------------------------
+def _getWnXc(reactants):
+    """
+    Get w(n;Xc).
+    (This is used for displaying propensities only)
+
+    :param dict reactants: reactant compartments Xc as a dictionary that maps Compartment to number of occurrences
+    :return: w(n;Xc)
+    """
+
+    def _n(content):
+        """
+        Expression for number of compartments with given content
+        """
+        if content.func == Compartment:
+            return _n(content.args[0])
+        return Function('n', integer=True)(content)
+
+    def _kronecker(content1, content2):
+        if content1.func == Compartment:
+            return _kronecker(content1.args[0], content2)
+        if content2.func == Compartment:
+            return _kronecker(content1, content2.args[0])
+        return KroneckerDelta(content1, content2)
+
+    if len(reactants) == 0:
+        return 1
+    elif len(reactants) == 1:
+        (compartment, count) = next(iter(reactants.items()))
+        __checkSimpleCompartment(compartment)
+        return 1 / factorial(count) * ff(_n(compartment), count)
+    elif len(reactants) == 2:
+        i = iter(reactants.items())
+        (compartment1, count1) = next(i)
+        (compartment2, count2) = next(i)
+        __checkSimpleCompartment(compartment1)
+        __checkSimpleCompartment(compartment2)
+        if count1 != 1 or count2 != 1:
+            raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
+        return _n(compartment1) * (_n(compartment2) - _kronecker(compartment1, compartment2)) \
+               / (1 + _kronecker(compartment1, compartment2))
+    else:
+        raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
 
 ###################################################
@@ -259,7 +350,6 @@ class Expectation(Function):
 #
 ###################################################
 
-
 # -------------------------------------------------
 def __getMoments(expr):
     """
@@ -298,7 +388,6 @@ def ito(expr):
 # Computing df(M)/dt
 #
 ###################################################
-
 
 # -------------------------------------------------
 def getCompartments(expr):
@@ -671,12 +760,11 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
 
 
 # -------------------------------------------------
-def get_dfMdt(transitions, fM, D):
+def get_dfMdt(transition_classes, fM, D):
     """
-    Given a function of Moments f(M) and a set of transitions, compute the derivative df(M)/dt.
+    Given a function of Moments f(M) and a set of transitions classes, compute the derivative df(M)/dt.
 
-    :param transitions: list of all transitions, where each transition is represented by a tuple
-        (transition, k_c, g_c, pi_c) with a Transition transition, expressions k_c and g_c, and a Pi_c pi_c
+    :param transition_classes: list of transition classes
     :param fM: a function of Moments
     :param D: number of species
     """
@@ -685,7 +773,8 @@ def get_dfMdt(transitions, fM, D):
     dfM = ito(fM)
     monomials = decomposeMomentsPolynomial(dfM)
     contrib = list()
-    for c, (transition, k_c, g_c, pi_c) in enumerate(transitions):
+    for c, tc in enumerate(transition_classes):
+        transition, k_c, g_c, pi_c = tc.transition, tc.k, tc.g, tc.pi
         for q, (k_q, pM, pDM) in enumerate(monomials):
             reactants = getCompartments(transition.lhs)
             products = getCompartments(transition.rhs)
@@ -712,14 +801,13 @@ def getRequiredMoments(dfMdt):
             required.add(M)
     return required
 
-def compute_moment_equations(transitions, moments, D, provided=set()):
+def compute_moment_equations(transition_classes, moments, D, provided=set()):
     """
     Given a reaction network, moment expressions, and number of species, computes
     a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression,
     and the derived expression for its time derivative.
 
-    :param transitions: list of all transitions, where each transition is represented by a tuple
-        (transition, k_c, g_c, pi_c) with a Transition transition, expressions k_c and g_c, and a Pi_c pi_c
+    :param transition_classes: list of all transition classes of the reaction network
     :param moments: a list of functions of Moments
     :param D: number of species
     :param provided: optional list of moment-functions whose evolutions are already known (these will not be returned as missing)
@@ -728,7 +816,7 @@ def compute_moment_equations(transitions, moments, D, provided=set()):
     evolutions = list()
     required = set()
     for fM in moments:
-        dfMdt = get_dfMdt(transitions, fM, D)
+        dfMdt = get_dfMdt(transition_classes, fM, D)
         evolutions.append((fM, dfMdt))
         required = required.union(getRequiredMoments(dfMdt))
     required = required - set(moments)
