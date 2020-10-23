@@ -1,5 +1,5 @@
-from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq
-from sympy import KroneckerDelta, factorial, ff
+from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, factorial, ff
+from sympy.core.decorators import call_highest_priority, sympify_method_args, sympify_return
 import itertools
 import collections
 
@@ -11,12 +11,26 @@ import collections
 ###################################################
 
 # -------------------------------------------------
-def Content(name):
+class Content(IndexedBase):
     """
-    Create a Content variable.
-    If X is a Content variable, then X[i] refers to content for species i.
+    A content variable.
+    If X is a content variable, then X[i] refers to content for species i.
     """
-    return IndexedBase(name, integer=True, shape=1)
+
+    def __new__(cls, label, shape=None, **kw_args):
+        return IndexedBase.__new__(cls, label, shape, **kw_args)
+
+    @call_highest_priority('__radd__')
+    def __add__(self, other):
+        if type(other) is tuple:
+            other = ContentChange(*other)
+        return Add(self, other)
+
+    @call_highest_priority('__add__')
+    def __radd__(self, other):
+        if type(other) is tuple:
+            other = ContentChange(*other)
+        return Add(self, other)
 
 
 # -------------------------------------------------
@@ -229,7 +243,7 @@ def _getContentVars(expr):
     """
     if expr.func in [Add, Mul, Compartment, ContentChange]:
         return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
-    elif expr.func == IndexedBase:
+    elif expr.func == Content:
         return {expr}
     elif expr.func == Indexed:
         return {expr.base}
@@ -512,7 +526,7 @@ def __getContentPerSpecies(content, D):
     elif content.func == Mul:
         xs = [__getContentPerSpecies(arg, D) for arg in content.args]
         return [Mul(*x) for x in zip(*xs)]
-    elif content.func == IndexedBase:
+    elif content.func == Content:
         return [content[i] for i in range(D)]
     elif content.func == ContentChange:
         return [content.args[i] for i in range(D)]
@@ -713,9 +727,9 @@ def __decomposeContentPolynomial2(expr, x, y, D):
 # -------------------------------------------------
 def __checkSimpleCompartment(expr):
     """
-    Checks that expr is a Compartment(IndexedBase) and throws TypeError if it is not
+    Checks that expr is a Compartment(Content) and throws TypeError if it is not
     """
-    if not (expr.func == Compartment and len(expr.args) == 1 and expr.args[0].func == IndexedBase):
+    if not (expr.func == Compartment and len(expr.args) == 1 and expr.args[0].func == Content):
         raise TypeError(
             "Only compartments comprising a single content variable are supported (not '" + str(expr) + "')")
 
