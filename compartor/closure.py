@@ -88,15 +88,14 @@ def gamma_closures(expressions):
 
 
 # -------------------------------------------------
-def substitute_closures(evolutions, closures):
+def substitute_closures(equations, closures):
     """
     Take expectation of rhs in evolutions, and substitute closures.
 
-    :param evolutions: list of pairs (fM, dfMdt). (as returned by compute_moment_evolutions)
+    :param equations: list of pairs (fM, dfMdt). (as returned by compute_moment_equations)
     :param closures: list of tuples of (expr, closure(expr))
-    :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by taking the expectation of dfMdt and substituting
-    closed moments
+    :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by substituting closed moments into dfMdt
     """
     substitutions = {Expectation(m): c for m, c in closures}
-    closed_evolutions = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in evolutions]
-    return closed_evolutions
+    closed_equations = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in equations]
+    return closed_equations
