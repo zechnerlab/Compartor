@@ -12,9 +12,9 @@ from IPython.core.display import display
 
 # -------------------------------------------------
 def display_propensity_details(transition_class, name=None):
-    tr, k, g, pi = transition_class.transition, transition_class.k, transition_class.g, transition_class.pi
+    k, g, pi = transition_class.k, transition_class.g, transition_class.pi
     if name is None:
-        name = tr.name
+        name = transition_class.name
     if name is None:
         name = ''
     display(Eq(Symbol('k_{' + name + '}'), k, evaluate=False))
@@ -39,7 +39,7 @@ def display_transition_classes(transitions):
         def _latex(self, printer=None):
             ll = []
             for t in self.transitions:
-                tl = t.transition._latex(printer, True)
+                tl = t.transition._latex(printer, align=True, name=t.name)
                 pl = t._propensity_latex(printer)
                 ll.append(r"%s && %s" % (tl, pl))
             return r"\begin{align} %s \end{align}" % r"\\".join(ll)

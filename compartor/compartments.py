@@ -24,13 +24,21 @@ class Content(IndexedBase):
     def __add__(self, other):
         if type(other) is tuple:
             other = ContentChange(*other)
+        elif type(other) is int:
+            other = ContentChange(other)
         return Add(self, other)
 
     @call_highest_priority('__add__')
     def __radd__(self, other):
         if type(other) is tuple:
             other = ContentChange(*other)
+        elif type(other) is int:
+            other = ContentChange(other)
         return Add(self, other)
+
+    @call_highest_priority('__rsub__')
+    def __sub__(self, other):
+        return self.__add__(-other)
 
 
 # -------------------------------------------------
@@ -89,12 +97,14 @@ class Transition(Basic):
     def _sympystr(self, printer=None):
         return f'{self.lhs} ---> {self.rhs}'
 
-    def _latex(self, printer=None, align=False):
+    def _latex(self, printer=None, align=False, name=None):
         # Always use printer.doprint() otherwise nested expressions won't
         # work. See the example of ModOpWrong.
         l = printer.doprint(self.lhs)
         r = printer.doprint(self.rhs)
-        arrow = '\longrightarrow{}' if self.name is None else '\overset{h_'+self.name+'}{\longrightarrow}'
+        if name is None:
+            name = self.name
+        arrow = '\longrightarrow{}' if name is None else '\overset{h_' + name + '}{\longrightarrow}'
         alignment = '&' if align else ''
         return l + alignment + arrow + r
 
@@ -193,7 +203,7 @@ class TransitionClass(Basic):
     Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the outcome distribuiton pi
     """
 
-    def __new__(cls, transition, k, g, pi=OutcomeDistribution.identity()):
+    def __new__(cls, transition, k, g=1, pi=OutcomeDistribution.identity(), name=None):
         t = Basic.__new__(cls)
         if pi == OutcomeDistribution.identity():
             cvl = _getContentVars(transition.lhs)
@@ -202,14 +212,22 @@ class TransitionClass(Basic):
                 raise ValueError("Please specify an OutcomeDistribution!"
                                  " Content variables occur in products that do not occur in reactants."
                                  " The default OutcomeDistribution cannot be applied.")
+
+        if name is None:
+            name = transition.name
+
+        if isinstance(k, str):
+            k = Constant(k)
+
         t.transition = transition
+        t.name = name
         t.k = k
         t.g = g
         t.pi = pi
         return t
 
     def __str__(self):
-        return f'TransitionClass("{self.transition.name}", {self.transition}, k={self.k}, g={self.g}, pi={self.pi})'
+        return f'TransitionClass("{self.name}", {self.transition}, k={self.k}, g={self.g}, pi={self.pi})'
 
     def _sympystr(self, printer=None):
         t = printer.doprint(self.transition)
@@ -217,7 +235,7 @@ class TransitionClass(Basic):
         return r"(%s, %s)" % (t,p)
 
     def _latex(self, printer=None):
-        transition_latex = self.transition._latex(printer)
+        transition_latex = self.transition._latex(printer, name=self.name)
         propensity_latex = self._propensity_latex(printer)
         return r"%s,\:%s" % (transition_latex, propensity_latex)
 
