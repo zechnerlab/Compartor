@@ -1,5 +1,5 @@
 from sympy import Add, Mul, Pow, Number, Symbol, simplify
-from compartments import Moment, Expectation
+from compartor.compartments import Moment, Expectation
 
 import itertools
 import collections

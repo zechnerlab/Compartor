@@ -1,5 +1,5 @@
 from sympy import Mul, Pow, Integer
-from compartments import Moment, Expectation
+from compartor.compartments import Moment, Expectation
 import itertools
 
 

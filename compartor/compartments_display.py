@@ -1,5 +1,5 @@
-from sympy import Eq, Symbol, Derivative, Add, Basic
-from compartments import Moment, Expectation, _getNumSpecies
+from sympy import Eq, Symbol, Derivative, Basic
+from compartor.compartments import Moment, Expectation, _getNumSpecies
 from IPython.core.display import display
 
 
