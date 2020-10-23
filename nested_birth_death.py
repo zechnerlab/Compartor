@@ -1,5 +1,5 @@
 from sympy import Symbol
-from compartments import Content, Transition, TransitionClass, EmptySet, Compartment, Constant, ContentChange, OutcomeDistribution
+from compartor import Content, Transition, TransitionClass, EmptySet, Compartment, Constant, ContentChange, OutcomeDistribution
 
 D = 1 # number of species
 
@@ -11,9 +11,9 @@ transition_I = Transition(EmptySet, Compartment(y), name='I')
 k_I = Constant('k_I')
 g_I = 1
 pi_I = OutcomeDistribution.poisson(
-    Symbol("\pi_{Poiss}(y; \lambda)", positive=True),
+    Symbol("\pi_{Poiss}(y; \lambda)"),
     y[0],
-    Symbol("\lambda", positive=True))
+    Symbol("\lambda"))
 Intake = TransitionClass(transition_I, k_I, g_I, pi_I)
 
 # Exit
