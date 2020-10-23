@@ -870,6 +870,58 @@ def _expectation(expr):
     return Add(*contrib)
 
 
+def _verifyContentNumSpecies(content, D):
+    """
+    Verify that the number of species occurring in all ContentChanges in content equals D.
+    Raise an error otherwise.
+
+    :param Expr content: the content of the compartment, comprising Contents, ContentChanges, sums of those, and multiplication by integers
+    :param int D: the number of species
+    """
+    if content.func in [Add, Mul]:
+        for arg in content.args:
+            _verifyContentNumSpecies(arg, D)
+    elif content.func == ContentChange:
+        if len(content.args) != D:
+            raise RuntimeError("Number of species occurring in in ContentChange expression"
+                               + str(content) + " is " + str(len(content.args))
+                               + ". Expected " + str(D))
+    elif issubclass(content.func, Integer):
+        pass
+    elif content.func == Content:
+        pass
+    else:
+        raise TypeError("Unexpected expression " + str(content))
+
+
+def _getAndVerifyNumSpecies(transition_classes, moments, D=None):
+    """
+    Verify that the number of species occurring in all transitions and moment expressions equals D.
+    Raise an error otherwise.
+    If D is not specified, just checks that number of species occurring in all transitions and
+    moment expressions is the same
+
+    :param transition_classes: a list of TransitionClass
+    :param moments: a list of Moment expressions
+    :param D: optionally, the expected number of species
+    :return: the number of species
+    """
+    for fM in moments:
+        DfM = _getNumSpecies(fM)
+        if D is None:
+            D = DfM
+        if D != DfM:
+            raise RuntimeError("Number of species occurring in in Moment expressions is not unique."
+                               + str(fM) + " contains moments of orders " + str(DfM)
+                               + ". Expected order " + str(D))
+    for tc in transition_classes:
+        for c in getCompartments(tc.transition.lhs).keys():
+           _verifyContentNumSpecies(c.args[0], D)
+        for c in getCompartments(tc.transition.rhs).keys():
+           _verifyContentNumSpecies(c.args[0], D)
+    return D
+
+
 ###################################################
 #
 # "Outer loop": get missing moments and iterate
@@ -884,7 +936,8 @@ def getRequiredMoments(dfMdt):
             required.add(M)
     return required
 
-def compute_moment_equations(transition_classes, moments, D, provided=set()):
+
+def compute_moment_equations(transition_classes, moments, D=None, provided=set()):
     """
     Given a reaction network, moment expressions, and number of species, computes
     a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression,
@@ -896,6 +949,7 @@ def compute_moment_equations(transition_classes, moments, D, provided=set()):
     :param provided: optional list of moment-functions whose evolutions are already known (these will not be returned as missing)
     :return: list of pairs (fM, dfMdt)
     """
+    D = _getAndVerifyNumSpecies(transition_classes, moments, D)
     evolutions = list()
     required = set()
     for fM in moments:
