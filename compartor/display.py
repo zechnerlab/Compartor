@@ -5,7 +5,8 @@ from IPython.core.display import display
 
 ###################################################
 #
-# Displaying transitions in notebooks
+# Displaying reaction networks and moment equations
+# in jupyter notebooks
 #
 ###################################################
 
@@ -45,21 +46,13 @@ def display_transition_classes(transitions):
     display(Display(transitions))
 
 
-###################################################
-#
-# Displaying expected moment evolution in notebooks
-#
-###################################################
-
 # -------------------------------------------------
-def display_moment_equation(expr_moment, expr_dfMdt, D=None):
+def display_moment_equation(expr_moment, expr_dfMdt):
     """
     :param expr_moment: lhs of evolution equation
     :param expr_dfMdt: rhs of evolution equation
-    :param D: if present, Moment([0]*D) will be replaced by N
     """
-    if D is None:
-        D = _getNumSpecies(expr_moment)
+    D = _getNumSpecies(expr_moment)
     lhs = Derivative(Expectation(expr_moment), Symbol('t'))
     rhs = expr_dfMdt
     evolution = Eq(lhs, rhs, evaluate=False)
@@ -69,6 +62,13 @@ def display_moment_equation(expr_moment, expr_dfMdt, D=None):
 
 
 # -------------------------------------------------
-def display_moment_equations(equations, D=None):
+def display_moment_equations(equations):
     for (fM, dfMdt) in equations:
-        display_moment_equation(fM, dfMdt, D)
+        display_moment_equation(fM, dfMdt)
+
+
+# -------------------------------------------------
+def display_closures(closures):
+    for m, c in closures:
+        D = _getNumSpecies(m)
+        display(Eq(Expectation(m), c).subs(Moment(*([0] * D)), Symbol('N')))
