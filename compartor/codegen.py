@@ -354,48 +354,48 @@ class AbstractCodeGenerator:
 
         return order
 
-    def _default_moment_indices(self, evolutions):
-        moments = [fM for fM, dfMdt in evolutions]
+    def _default_moment_indices(self, equations):
+        moments = [fM for fM, dfMdt in equations]
         return {moment: i + self.index_base for i, moment in enumerate(moments)}
 
-    def _default_constant_variables(self, evolutions):
-        constants = _get_constants(evolutions)
+    def _default_constant_variables(self, equations):
+        constants = _get_constants(equations)
         return {constant: f'c{i}' for i, constant in enumerate(constants)}
 
-    def _default_constant_initializers(self, evolutions):
-        constants = _get_constants(evolutions)
+    def _default_constant_initializers(self, equations):
+        constants = _get_constants(equations)
         return {constant: '??? ' + self.format_comment(f'{constant}, please specify!') for constant in constants}
 
-    def _default_moment_initializers(self, evolutions):
-        moments = [fM for fM, dfMdt in evolutions if fM.func is Moment]
+    def _default_moment_initializers(self, equations):
+        moments = [fM for fM, dfMdt in equations if fM.func is Moment]
         return {moment: '??? ' + self.format_comment(f'initial value for {moment}, please specify!') for moment in moments}
 
-    def _init_dictionaries(self, evolutions):
+    def _init_dictionaries(self, equations):
         if self.moment_indices is None:
-            self._moment_indices = self._default_moment_indices(evolutions)
+            self._moment_indices = self._default_moment_indices(equations)
         else:
             self._moment_indices = self.moment_indices
 
         if self.constant_variables is None:
-            self._constant_variables = self._default_constant_variables(evolutions)
+            self._constant_variables = self._default_constant_variables(equations)
         else:
             self._constant_variables = self.constant_variables
 
         if self.constant_initializers is None:
-            self._constant_initializers = self._default_constant_initializers(evolutions)
+            self._constant_initializers = self._default_constant_initializers(equations)
         else:
             self._constant_initializers = self.constant_initializers
 
         if self.moment_initializers is None:
-            self._moment_initializers = self._default_moment_initializers(evolutions)
+            self._moment_initializers = self._default_moment_initializers(equations)
         else:
             self._moment_initializers = self.moment_initializers
 
-    def gen_ODEs_body(self, evolutions):
+    def gen_ODEs_body(self, equations):
         for k, v in self._constant_initializers.items():
             self.append_statement(f'{self.gen_constant(k)} = {v}')
 
-        for fM, dfMdt in evolutions:
+        for fM, dfMdt in equations:
             # c = gen_comment_text(fM)
             # self.append_statement(f'# {"???" if c is None else c}')
             c = self._gen_code_expr(simplify(dfMdt)).code()
@@ -405,8 +405,8 @@ class AbstractCodeGenerator:
                 self.append_comment(comment)
             self.append_statement(f'{self.gen_dM(fM)} = {c}')
 
-    def gen_initial_body(self, evolutions):
-        index_map = {fM : i for i, (fM, dfMdt) in enumerate(evolutions)}
+    def gen_initial_body(self, equations):
+        index_map = {fM : i for i, (fM, dfMdt) in enumerate(equations)}
         exprs = self._initialization_order(index_map)
         for expr in exprs:
             comment = _gen_comment_text(expr)
@@ -430,13 +430,13 @@ class GenerateJulia(AbstractCodeGenerator):
     def format_pow(self, base, exp):
         return f'{base}^{exp}'
 
-    def generate(self, evolutions):
-        self._init_dictionaries(evolutions)
+    def generate(self, equations):
+        self._init_dictionaries(equations)
 
         self.append_comment("evaluate ODEs")
         self.append_statement("function coagulation_fragmentation_ODEs(dM::Vector{Float64},M::Vector{Float64},S::System,t::Float64)")
         self.indent(2)
-        self.gen_ODEs_body(evolutions)
+        self.gen_ODEs_body(equations)
         self.append_statement("return")
         self.indent(-2)
         self.append_statement("end")
@@ -445,8 +445,8 @@ class GenerateJulia(AbstractCodeGenerator):
         self.append_comment("initialize expected moments vector")
         self.append_statement("function coagulation_fragmentation_initial(n0::Matrix{Int64}) :: Vector{Float64}")
         self.indent(2)
-        self.append_statement(f'M=zeros[{len(evolutions)}]')
-        self.gen_initial_body(evolutions)
+        self.append_statement(f'M=zeros[{len(equations)}]')
+        self.gen_initial_body(equations)
         self.append_statement("return M")
         self.indent(-2)
         self.append_statement("end")
@@ -470,11 +470,11 @@ class GeneratePython(AbstractCodeGenerator):
     def format_pow(self, base, exp):
         return f'{base}**{exp}'
 
-    def _default_moment_initializers(self, evolutions):
-        moments = [fM for fM, dfMdt in evolutions if fM.func is Moment]
+    def _default_moment_initializers(self, equations):
+        moments = [fM for fM, dfMdt in equations if fM.func is Moment]
         return {moment: f'initial[{i}]' for i, moment in enumerate(moments)}
 
-    def _default_constant_initializers(self, evolutions):
+    def _default_constant_initializers(self, equations):
         if self.constants_parameter_order:
             # if user set a constants_order, we use that to determine indices in parameters[] array
             def constants_order(expr):
@@ -486,13 +486,13 @@ class GeneratePython(AbstractCodeGenerator):
         else:
             # otherwise, we use lexicographical order of constant names
             key = lambda x: str(x)
-        constants = sorted(_get_constants(evolutions), key=key)
+        constants = sorted(_get_constants(equations), key=key)
         return collections.OrderedDict(
             (constant, f'parameters[{i}] ' + self.format_comment(f'{constant}'))
             for i, constant in enumerate(constants))
 
-    def generate(self, evolutions, function_name = "generated"):
-        self._init_dictionaries(evolutions)
+    def generate(self, equations, function_name = "generated"):
+        self._init_dictionaries(equations)
 
         self.append_comment("evaluate ODEs")
         self.append_statement(f'def {function_name}_ODEs(M, dM, parameters):')
@@ -512,7 +512,7 @@ class GeneratePython(AbstractCodeGenerator):
                               ')')
         self.append_statement(':return: dM')
         self.append_statement('"""')
-        self.gen_ODEs_body(evolutions)
+        self.gen_ODEs_body(equations)
 
         self.append_statement("return dM")
         self.indent(-2)
@@ -525,15 +525,15 @@ class GeneratePython(AbstractCodeGenerator):
         self.append_statement('Create inital expected moments vector')
         self.append_statement('')
         if not self.moment_initializers:
-            moments = [fM for fM, dfMdt in evolutions if fM.func is Moment]
+            moments = [fM for fM, dfMdt in equations if fM.func is Moment]
             self.append_statement(':param initial: tuple of initial values for expectations of (' +
                                   ', '.join([f'{moment}' for moment in moments]) +
                                   ')')
         self.append_statement(':return: initial expected moments vector')
         self.append_statement('"""')
         self.append_statement('import numpy as np')
-        self.append_statement(f'M = np.zeros({len(evolutions)})')
-        self.gen_initial_body(evolutions)
+        self.append_statement(f'M = np.zeros({len(equations)})')
+        self.gen_initial_body(equations)
         self.append_statement("return M")
         self.indent(-2)
         self.append_statement("")
