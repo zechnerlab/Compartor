@@ -236,11 +236,12 @@ class TransitionClass(Basic):
 
     def _latex(self, printer=None):
         transition_latex = self.transition._latex(printer, name=self.name)
-        propensity_latex = self._propensity_latex(printer)
+        propensity_latex = self._propensity_latex(printer, name=self.name)
         return r"%s,\:%s" % (transition_latex, propensity_latex)
 
-    def _propensity_latex(self, printer=None):
-        name = self.transition.name
+    def _propensity_latex(self, printer=None, name=None):
+        if name is None:
+            name = self.transition.name
         if name is None:
             name = ''
         h_c = Symbol("h_{" + name + "}")

@@ -26,9 +26,9 @@ def display_propensity_details(transition_class, name=None):
 def display_transition_classes(transitions):
     class Display(Basic):
         def __new__(cls, transitions):
-            t = Basic.__new__(cls)
-            t.transitions = transitions
-            return t
+            obj = Basic.__new__(cls)
+            obj.transitions = transitions
+            return obj
 
         def __str__(self):
             return 'Display.__str__: TODO'
@@ -40,7 +40,7 @@ def display_transition_classes(transitions):
             ll = []
             for t in self.transitions:
                 tl = t.transition._latex(printer, align=True, name=t.name)
-                pl = t._propensity_latex(printer)
+                pl = t._propensity_latex(printer, name=t.name)
                 ll.append(r"%s && %s" % (tl, pl))
             return r"\begin{align} %s \end{align}" % r"\\".join(ll)
     display(Display(transitions))
