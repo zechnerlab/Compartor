@@ -430,11 +430,11 @@ class GenerateJulia(AbstractCodeGenerator):
     def format_pow(self, base, exp):
         return f'{base}^{exp}'
 
-    def generate(self, equations):
+    def generate(self, equations, function_name = "generated"):
         self._init_dictionaries(equations)
 
         self.append_comment("evaluate ODEs")
-        self.append_statement("function coagulation_fragmentation_ODEs(dM::Vector{Float64},M::Vector{Float64},S::System,t::Float64)")
+        self.append_statement(f'function {function_name}_ODEs(dM, M, parameters, t)')
         self.indent(2)
         self.gen_ODEs_body(equations)
         self.append_statement("return")
@@ -443,7 +443,7 @@ class GenerateJulia(AbstractCodeGenerator):
         self.append_statement("")
 
         self.append_comment("initialize expected moments vector")
-        self.append_statement("function coagulation_fragmentation_initial(n0::Matrix{Int64}) :: Vector{Float64}")
+        self.append_statement(f'function {function_name}_initial(n0)')
         self.indent(2)
         self.append_statement(f'M=zeros[{len(equations)}]')
         self.gen_initial_body(equations)
