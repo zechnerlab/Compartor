@@ -104,7 +104,7 @@ class Transition(Basic):
         r = printer.doprint(self.rhs)
         if name is None:
             name = self.name
-        arrow = '\longrightarrow{}' if name is None else '\overset{h_' + name + '}{\longrightarrow}'
+        arrow = '\longrightarrow{}' if name is None else '\overset{h_{' + name + '}}{\longrightarrow}'
         alignment = '&' if align else ''
         return l + alignment + arrow + r
 
