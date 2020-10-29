@@ -455,6 +455,13 @@ class GenerateJulia(AbstractCodeGenerator):
 
 
 # -------------------------------------------------
+def generate_julia_code(equations, function_name = "generated"):
+    generator = GenerateJulia()
+    code = generator.generate(equations, function_name=function_name)
+    return code
+
+
+# -------------------------------------------------
 class GeneratePython(AbstractCodeGenerator):
     def __init__(self):
         super().__init__()
@@ -538,3 +545,10 @@ class GeneratePython(AbstractCodeGenerator):
         self.indent(-2)
         self.append_statement("")
         return self._code
+
+
+# -------------------------------------------------
+def generate_python_code(equations, function_name = "generated"):
+    generator = GeneratePython()
+    code = generator.generate(equations, function_name=function_name)
+    return code
