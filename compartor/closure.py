@@ -88,6 +88,40 @@ def gamma_closures(expressions):
 
 
 # -------------------------------------------------
+def meanfield_closure(expr):
+    """
+    Compute meanfield closure for expectation of expr.
+
+    :param expr: product of powers of moments
+    :return: meanfield closure of <expr>
+    """
+
+    def __product(list):
+        r = 1
+        for x in list:
+            r *= x
+        return r
+
+    # get tuples(M, pow) in expr
+    moment_powers = __getMomentPowers(expr)
+    # sort by ascending pow
+    moment_powers = sorted(moment_powers, key=lambda x: x[1])
+
+    return  __product([Expectation(moment_power[0])**moment_power[1] for moment_power in moment_powers])
+
+
+# -------------------------------------------------
+def meanfield_closures(expressions):
+    """
+    Compute meanfield closure for each of expressions.
+
+    :param expressions: list of moment expressions, where each expression is a product of powers of moments
+    :return: list of tuples of (expr, meanfield_closure(expr))
+    """
+    return [(expr, meanfield_closure(expr)) for expr in expressions]
+
+
+# -------------------------------------------------
 def substitute_closures(equations, closures):
     """
     Take expectation of rhs in evolutions, and substitute closures.
