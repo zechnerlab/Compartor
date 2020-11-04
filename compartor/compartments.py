@@ -960,3 +960,26 @@ def compute_moment_equations(transition_classes, moments, D=None, provided=set()
     required = required - set(moments)
     required = required - set(provided)
     return (evolutions, required)
+
+
+def get_missing_moments(equations):
+    """
+    Given a system of moment equations, compute the moment expressions that occur
+    on the right-hand-side of equations but are not governed by the system.
+
+    :param equations: a list of pairs `(fM, dfMdt)`, where each pair consists of
+            the desired moment expression and the derived expression for its time derivative.
+    :return: set of missing moment expressions
+    """
+
+    def _get_moment_epressions(expr):
+        if expr.func is Expectation:
+            return {expr.args[0]}
+        elif expr.func in [Add, Mul, Pow]:
+            return set(itertools.chain(*(_get_moment_epressions(arg) for arg in expr.args)))
+        else:
+            return {}
+
+    rhs = set(itertools.chain(*(_get_moment_epressions(dfMdt) for _, dfMdt in equations)))
+    lhs = set(fM for fM, _ in equations)
+    return rhs - lhs
