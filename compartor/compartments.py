@@ -1,5 +1,6 @@
-from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, factorial, ff
-from sympy.core.decorators import call_highest_priority, sympify_method_args, sympify_return
+from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, \
+    factorial, ff
+from sympy.core.decorators import call_highest_priority
 import itertools
 import collections
 
@@ -938,28 +939,24 @@ def getRequiredMoments(dfMdt):
     return required
 
 
-def compute_moment_equations(transition_classes, moments, D=None, provided=set()):
+def compute_moment_equations(transition_classes, moments, D=None):
     """
     Given a reaction network, moment expressions, and number of species, computes
-    a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression,
+    a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression
     and the derived expression for its time derivative.
 
     :param transition_classes: list of all transition classes of the reaction network
     :param moments: a list of functions of Moments
-    :param D: number of species
-    :param provided: optional list of moment-functions whose evolutions are already known (these will not be returned as missing)
+    :param D: optionally, the number of species
     :return: list of pairs (fM, dfMdt)
     """
     D = _getAndVerifyNumSpecies(transition_classes, moments, D)
-    evolutions = list()
+    equations = list()
     required = set()
     for fM in moments:
         dfMdt = get_dfMdt(transition_classes, fM, D)
-        evolutions.append((fM, _expectation(dfMdt)))
-        required = required.union(getRequiredMoments(dfMdt))
-    required = required - set(moments)
-    required = required - set(provided)
-    return (evolutions, required)
+        equations.append((fM, _expectation(dfMdt)))
+    return equations
 
 
 def get_missing_moments(equations):
