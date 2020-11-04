@@ -132,6 +132,19 @@ def meanfield_closures(expressions):
     return [(expr, meanfield_closure(expr)) for expr in expressions]
 
 
+
+
+# -------------------------------------------------
+def hybrid_closures(expressions):
+    """
+    Attempt gamma closure for each of expressions.
+    For the expressions that could not be closed by gamma closure, do mean-field closure
+    """
+    gamma, could_not_close = gamma_closures(expressions)
+    meanfield = meanfield_closures(could_not_close)
+    return gamma+meanfield
+
+
 # -------------------------------------------------
 def substitute_closures(equations, closures):
     """

@@ -5,7 +5,8 @@ from .syntactic_sugar import yields
 from .display import (
     display_transition_classes, display_propensity_details,
     display_moment_equations, display_closures)
-from .closure import gamma_closure, gamma_closures, meanfield_closure, meanfield_closures, substitute_closures
+from .closure import (gamma_closure, gamma_closures, meanfield_closure, meanfield_closures,
+    hybrid_closures, substitute_closures)
 from .codegen import GenerateJulia, GeneratePython, generate_julia_code, generate_python_code
 
 __all__ = [
@@ -22,7 +23,8 @@ __all__ = [
     'display_moment_equations', 'display_closures',
 
     # compartor.closure
-    'gamma_closure', 'gamma_closures', 'meanfield_closure', 'meanfield_closures', 'substitute_closures',
+    'gamma_closure', 'gamma_closures', 'meanfield_closure', 'meanfield_closures',
+    'hybrid_closures', 'substitute_closures',
 
     # compartor.codegen
     'GenerateJulia', 'GeneratePython', 'generate_julia_code', 'generate_python_code'
