@@ -64,16 +64,14 @@ def gamma_closure(expr):
     # sort by ascending pow
     moment_powers = sorted(moment_powers, key=lambda x: x[1])
 
-    try:
-        if len(moment_powers) == 1 and moment_powers[0][1] == 1 and moment_powers[0][0].order() == 3:
-            return __closure1(moment_powers)
-        elif len(moment_powers) == 1 and moment_powers[0][1] == 3:
-            return __closure2(moment_powers)
-        elif len(moment_powers) == 2 and moment_powers[0][1] == 1 and moment_powers[1][1] == 2:
-            return __closure2(moment_powers)
-    except ValueError:
-        pass
-    raise RuntimeError("Not implemented yet: closure for " + str(expr))
+    if len(moment_powers) == 1 and moment_powers[0][1] == 1 and moment_powers[0][0].order() == 3:
+        return __closure1(moment_powers)
+    elif len(moment_powers) == 1 and moment_powers[0][1] == 3:
+        return __closure2(moment_powers)
+    elif len(moment_powers) == 2 and moment_powers[0][1] == 1 and moment_powers[1][1] == 2:
+        return __closure2(moment_powers)
+    else:
+        raise ValueError("Could not derive Gamma closure for " + str(expr) + " (Not implemented yet).")
 
 
 # -------------------------------------------------
@@ -81,10 +79,23 @@ def gamma_closures(expressions):
     """
     Try to compute gamma closure for each of expressions.
 
-    :param expressions: list of moment expressions, where each expression is a product of powers of moments
-    :return: list of tuples of (expr, gamma_closure(expr))
+    :param expressions: list of moment expressions, where each expression is a product of
+            powers of moments
+    :return: a tuple (closures, could_not_close).
+            The first element, closures, is a list of tuples of (expr, gamma_closure(expr))
+            for expressions where we could derive the gamma closure.
+            The second element, could_not_close, is a lost of those expressions where we
+            could not not derive the gamma closure.
     """
-    return [(expr, gamma_closure(expr)) for expr in expressions]
+    closures = []
+    could_not_close = []
+    for expr in expressions:
+        try:
+            closure = gamma_closure(expr)
+            closures.append((expr, closure))
+        except ValueError:
+            could_not_close.append(expr)
+    return (closures, could_not_close)
 
 
 # -------------------------------------------------
