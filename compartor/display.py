@@ -71,4 +71,4 @@ def display_moment_equations(equations):
 def display_closures(closures):
     for m, c in closures:
         D = _getNumSpecies(m)
-        display(Eq(Expectation(m), c).subs(Moment(*([0] * D)), Symbol('N')))
+        display(Eq(Expectation(m), c, evaluate=False).subs(Moment(*([0] * D)), Symbol('N')))
