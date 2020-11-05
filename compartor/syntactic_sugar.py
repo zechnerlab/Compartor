@@ -50,4 +50,4 @@ def _make_transition(reactants, products):
     return Transition(_parse(reactants), _parse(products))
 
 
-yields = _Infix(_make_transition)
+to = _Infix(_make_transition)
