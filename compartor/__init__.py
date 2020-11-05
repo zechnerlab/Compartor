@@ -1,7 +1,7 @@
 from .compartments import (
     Content, ContentChange, Compartment, EmptySet, Transition, TransitionClass,
     Constant, OutcomeDistribution, Moment, compute_moment_equations, get_missing_moments)
-from .syntactic_sugar import yields
+from .syntactic_sugar import to
 from .display import (
     display_transition_classes, display_propensity_details,
     display_moment_equations, display_closures)
@@ -16,7 +16,7 @@ __all__ = [
     'compute_moment_equations', 'get_missing_moments',
 
     # compartor.syntactic_sugar
-    'yields',
+    'to',
 
     # compartor.display
     'display_transition_classes', 'display_propensity_details',
