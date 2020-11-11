@@ -1,6 +1,6 @@
 from sympy import Eq, Symbol, Derivative, Basic
-from compartor.compartments import Moment, Expectation, _getNumSpecies
-from IPython.core.display import display
+from compartor.compartments import Moment, Expectation, _getNumSpecies, get_missing_moments
+from IPython.core.display import display, Markdown
 
 
 ###################################################
@@ -62,9 +62,14 @@ def display_moment_equation(expr_moment, expr_dfMdt):
 
 
 # -------------------------------------------------
-def display_moment_equations(equations):
+def display_moment_equations(equations, print_missing=True):
     for (fM, dfMdt) in equations:
         display_moment_equation(fM, dfMdt)
+    if print_missing:
+        missing = get_missing_moments(equations)
+        if missing:
+            display(Markdown('**The system is not closed!** Moment equations are missing for:'))
+            display(missing)
 
 
 # -------------------------------------------------
