@@ -30,7 +30,7 @@ class _Infix:
 
 def _parse_content(expr):
     if type(expr) is tuple:
-        return ContentChange(*expr)
+        return Compartment(ContentChange(*expr))
     else:
         return Compartment(expr)
 
