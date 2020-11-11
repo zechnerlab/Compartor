@@ -75,27 +75,28 @@ def gamma_closure(expr):
 
 
 # -------------------------------------------------
-def gamma_closures(expressions):
+def gamma_closures(expressions, could_not_close=None):
     """
     Try to compute gamma closure for each of expressions.
 
     :param expressions: list of moment expressions, where each expression is a product of
             powers of moments
-    :return: a tuple (closures, could_not_close).
-            The first element, closures, is a list of tuples of (expr, gamma_closure(expr))
-            for expressions where we could derive the gamma closure.
-            The second element, could_not_close, is a lost of those expressions where we
-            could not not derive the gamma closure.
+    :param could_not_close: a list that will be filled with expressions that could not be closed.
+            If this optional argument is not specified, then a ValueError will be raised if an
+            expression cannot be closed.
+    :return: list of tuples of (expr, gamma_closure(expr))
     """
     closures = []
-    could_not_close = []
     for expr in expressions:
         try:
             closure = gamma_closure(expr)
             closures.append((expr, closure))
         except ValueError:
-            could_not_close.append(expr)
-    return (closures, could_not_close)
+            if could_not_close is not None:
+                could_not_close.append(expr)
+            else:
+                raise
+    return closures
 
 
 # -------------------------------------------------
@@ -132,15 +133,14 @@ def meanfield_closures(expressions):
     return [(expr, meanfield_closure(expr)) for expr in expressions]
 
 
-
-
 # -------------------------------------------------
 def hybrid_closures(expressions):
     """
     Attempt gamma closure for each of expressions.
     For the expressions that could not be closed by gamma closure, do mean-field closure
     """
-    gamma, could_not_close = gamma_closures(expressions)
+    could_not_close = []
+    gamma = gamma_closures(expressions, could_not_close)
     meanfield = meanfield_closures(could_not_close)
     return gamma+meanfield
 
