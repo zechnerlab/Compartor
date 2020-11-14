@@ -8,6 +8,7 @@ from .display import (
 from .closure import (gamma_closure, gamma_closures, meanfield_closure, meanfield_closures,
     hybrid_closures, substitute_closures)
 from .codegen import GenerateJulia, GeneratePython, generate_julia_code, generate_python_code
+from .automated import automated_moment_equations
 
 __all__ = [
     # compartor.compartments
@@ -27,6 +28,8 @@ __all__ = [
     'hybrid_closures', 'substitute_closures',
 
     # compartor.codegen
-    'GenerateJulia', 'GeneratePython', 'generate_julia_code', 'generate_python_code'
-]
+    'GenerateJulia', 'GeneratePython', 'generate_julia_code', 'generate_python_code',
 
+    # automated 
+    'automated_moment_equations'
+]
