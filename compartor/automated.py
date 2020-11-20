@@ -28,6 +28,8 @@ def automated_moment_equations(D, transition_classes, moments=None, display_deta
             indices[d] = 1
             moments.append(Moment(*indices))
             indices[d] = 0
+    else:
+        moments = moments.copy()
     _getAndVerifyNumSpecies(transition_classes, moments, D)
     desired = moments.copy()
     added = []
