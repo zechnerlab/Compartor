@@ -4,7 +4,7 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='example-pkg-compartor-tpietzsch',
+    name='compartor',
     version='0.0.1',
     packages=['compartor'],
     url='http://github.com/zechnerlab/Compartor',
@@ -21,5 +21,3 @@ setuptools.setup(
     install_requires=['sympy>=1.6'],
 )
 
-# TODO required: sympy 1.6.2
-# TODO python version required? >= 3.5 ?
