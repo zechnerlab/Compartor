@@ -150,7 +150,7 @@ class OutcomeDistribution(object):
         return cls._identity
 
     @classmethod
-    def poisson(cls, symbol, y, rate):
+    def Poisson(cls, symbol, y, rate):
         """
         Returns an OutcomeDistribution that is a Poisson distribution of y
 
@@ -170,7 +170,26 @@ class OutcomeDistribution(object):
         return OutcomeDistribution(symbol, expectation)
 
     @classmethod
-    def uniform(cls, symbol, y, start, end):
+    def NegativeBinomial(cls, symbol, y, r, p):
+        """
+        Returns an OutcomeDistribution that is a Negative Binomial distribution
+
+        :param symbol: symbol to use when displaying Pi_c in equations
+        :param y: random variable, entry in a content variable, e.g., y[0]
+        :param r: failures parameter of the Negative Binomial distribution
+        :param p: success probability of the Negative Binomial distribution.
+        :return Pi_c:
+        """
+        from sympy.stats import NegativeBinomial, E
+        def expectation(pDMcj):
+            nb = NegativeBinomial('nb', r, p)
+            return E(pDMcj.subs(y, nb))
+
+        return OutcomeDistribution(symbol, expectation)
+
+
+    @classmethod
+    def Uniform(cls, symbol, y, start, end):
         """
         Returns an OutcomeDistribution that is a uniform distribution of y with values from start (inclusive) to end (inclusive)
 
@@ -188,6 +207,24 @@ class OutcomeDistribution(object):
                 pDMcj * 1 / (end - start + 1),
                 (y, start, end)
             ).doit().factor().expand()
+
+        return OutcomeDistribution(symbol, expectation)
+
+    @classmethod
+    def Binomial(cls, symbol, y, n, p):
+        """
+        Returns an OutcomeDistribution that is a Binomial distribution
+
+        :param symbol: symbol to use when displaying Pi_c in equations
+        :param y: random variable, entry in a content variable, e.g., y[0]
+        :param n: number parameter of the Binomial distribution
+        :param p: success probability of the Binomial distribution.
+        :return Pi_c:
+        """
+        from sympy.stats import Binomial, E
+        def expectation(pDMcj):
+            binomial = Binomial('binomial', n, p)
+            return E(pDMcj.subs(y, binomial))
 
         return OutcomeDistribution(symbol, expectation)
 
