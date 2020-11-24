@@ -139,7 +139,7 @@ class OutcomeDistribution(object):
     _identity = None
 
     @classmethod
-    def identity(cls):
+    def Identity(cls):
         """
         Returns the OutcomeDistribution with identity conditional_expectation.
         This can be used for Y_c = {} or, more precisely,
@@ -241,9 +241,9 @@ class TransitionClass(Basic):
     Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the outcome distribuiton pi
     """
 
-    def __new__(cls, transition, k, g=1, pi=OutcomeDistribution.identity(), name=None):
+    def __new__(cls, transition, k, g=1, pi=OutcomeDistribution.Identity(), name=None):
         t = Basic.__new__(cls)
-        if pi == OutcomeDistribution.identity():
+        if pi == OutcomeDistribution.Identity():
             cvl = _getContentVars(transition.lhs)
             cvr = _getContentVars(transition.rhs)
             if cvr - cvl:
@@ -293,7 +293,7 @@ class TransitionClass(Basic):
 def _getContentVars(expr):
     """
     Get all the Content variables occurring in expr.
-    (This is used in TransitionClass to check whether the default OutcomeDistribution.identity() is permissible)
+    (This is used in TransitionClass to check whether the default OutcomeDistribution.Identity() is permissible)
 
     :param Expr expr: Compartment, Content, ContentChange, sums of those, and multiplication by integers
     :returns: set of Content variables
