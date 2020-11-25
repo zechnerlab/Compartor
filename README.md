@@ -20,8 +20,10 @@ A tutorial for the usage of Compartor is provided as Jupyter notebooks at https:
 
 ## Publications
 
-Compartor is based on the theoretical framework by
+Compartor is based on the theoretical framework introduced by
+
 Duso, L. and Zechner, C. (2020).
 Stochastic reaction networks in dynamic compartment populations.
 *Proceedings of the National Academy of Sciences,* **117**(37), 22674–22683.
+
 https://www.pnas.org/content/117/37/22674
