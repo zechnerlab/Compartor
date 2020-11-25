@@ -2,16 +2,20 @@
 
 Compartor is an automatic moment equation generator for stochastic compartment populations:
 From a set of provided interaction rules, it derives the associated system of ODEs that describes the population statistics.
-Equations can be exported Python or Julia code.
+Equations can be exported as Python or Julia code.
+
 
 ## Installation
 
-TODO
+Install with `pip`
+```
+pip install compartor
+```
 
 
 ## Getting started
 
-TODO
+A tutorial for the usage of Compartor is provided as jupyter notebooks at https://github.com/zechnerlab/Compartor
 
 
 ## Publications
