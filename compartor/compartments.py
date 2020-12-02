@@ -210,23 +210,23 @@ class OutcomeDistribution(object):
 
         return OutcomeDistribution(symbol, expectation)
 
-    @classmethod
-    def Binomial(cls, symbol, y, n, p):
-        """
-        Returns an OutcomeDistribution that is a Binomial distribution
-
-        :param symbol: symbol to use when displaying Pi_c in equations
-        :param y: random variable, entry in a content variable, e.g., y[0]
-        :param n: number parameter of the Binomial distribution
-        :param p: success probability of the Binomial distribution.
-        :return Pi_c:
-        """
-        from sympy.stats import Binomial, E
-        def expectation(pDMcj):
-            binomial = Binomial('binomial', n, p)
-            return E(pDMcj.subs(y, binomial))
-
-        return OutcomeDistribution(symbol, expectation)
+    #@classmethod
+    #def Binomial(cls, symbol, y, n, p):
+    #    """
+    #    Returns an OutcomeDistribution that is a Binomial distribution
+    #
+    #    :param symbol: symbol to use when displaying Pi_c in equations
+    #    :param y: random variable, entry in a content variable, e.g., y[0]
+    #    :param n: number parameter of the Binomial distribution
+    #    :param p: success probability of the Binomial distribution.
+    #    :return Pi_c:
+    #    """
+    #    from sympy.stats import Binomial, E
+    #    def expectation(pDMcj):
+    #        binomial = Binomial('binomial', n, p)
+    #        return E(pDMcj.subs(y, binomial))
+    #
+    #    return OutcomeDistribution(symbol, expectation)
 
 
 ###################################################
