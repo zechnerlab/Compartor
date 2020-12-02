@@ -1,5 +1,5 @@
 from compartor.closure import gamma_closures, substitute_closures, __getMomentPowers, meanfield_closures
-from compartor.compartments import Moment, compute_moment_equations, get_missing_moments, _getAndVerifyNumSpecies, _getNumSpecies
+from compartor.compartments import Moment, Expectation, compute_moment_equations, get_missing_moments, _getAndVerifyNumSpecies, _getNumSpecies
 
 class AutomatedMomentClosureDetails():
     def __init__(self):
@@ -86,7 +86,7 @@ def display_automated_moment_closure_details(details):
     from sympy import latex, Symbol
     def _print(expr):
         N = Moment(*([0] * _getNumSpecies(expr)))
-        return f'${latex(expr.subs(N, Symbol("N")))}$'
+        return f'${latex(Expectation(expr.subs(N, Symbol("N"))))}$'
     def _print_all(expressions):
         all_but_last = ", ".join([_print(expr) for expr in expressions[:-1]])
         last = _print(expressions[-1])
