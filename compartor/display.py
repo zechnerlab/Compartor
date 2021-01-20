@@ -31,7 +31,10 @@ def display_transition_classes(transitions):
             return obj
 
         def __str__(self):
-            return 'Display.__str__: TODO'
+            ll = []
+            for t in self.transitions:
+                ll.append(str(t.transition) + ",  " + t._propensity_str(name=t.name))
+            return "\n".join(ll)
 
         def _sympystr(self, printer=None):
             return 'Display._sympystr: TODO'

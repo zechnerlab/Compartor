@@ -267,6 +267,16 @@ class TransitionClass(Basic):
     def __str__(self):
         return f'TransitionClass("{self.name}", {self.transition}, k={self.k}, g={self.g}, pi={self.pi})'
 
+    def _propensity_str(self, name=None):
+        if name is None:
+            name = self.transition.name
+        if name is None:
+            name = ''
+        reactants = getCompartments(self.transition.lhs)
+        w = _getWnXc(reactants)
+        expr = self.k * self.g * self.pi.expr * w
+        return "h_" + name + " = " + str(expr)
+
     def _sympystr(self, printer=None):
         t = printer.doprint(self.transition)
         p = self._propensity_latex(printer)
