@@ -23,6 +23,12 @@ A tutorial for the usage of Compartor is provided as Jupyter notebooks at https:
 
 ## Publications
 
+Compartor is published in
+
+Pietzsch, T., Duso, L., Zechner, C. (2020)
+Compartor: a toolbox for the automatic generation of moment equations for dynamic compartment populations.
+*Bioinformatics,* 2021, btab058, (https://doi.org/10.1093/bioinformatics/btab058).
+
 Compartor is based on the theoretical framework introduced by
 
 Duso, L. and Zechner, C. (2020).
