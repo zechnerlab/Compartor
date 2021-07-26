@@ -1,4 +1,4 @@
-from compartor.closure import gamma_closures, substitute_closures, __getMomentPowers, meanfield_closures
+from compartor.closure import apply_substitutions, gamma_closures, substitute_closures, __getMomentPowers, meanfield_closures
 from compartor.compartments import Moment, Expectation, compute_moment_equations, get_missing_moments, _getAndVerifyNumSpecies, _getNumSpecies
 
 class AutomatedMomentClosureDetails():
@@ -8,7 +8,11 @@ class AutomatedMomentClosureDetails():
         self.gamma = []
         self.meanfield = []
 
-def automated_moment_equations(D, transition_classes, moments=None, display_details=True, details=None):
+def automated_moment_equations(D, transition_classes, 
+                                moments=None, 
+                                display_details=True, details=None,
+                                custom_closures=[], custom_substitutions=[],
+                                clna=False):
     """
     Outputs a closed system of moment equations for the provided transition classes.
     The moments to be characterized are identified automatically to comprise at least expected number and total mass dynamics.
@@ -34,7 +38,10 @@ def automated_moment_equations(D, transition_classes, moments=None, display_deta
     desired = moments.copy()
     added = []
     while True:
-        equations = compute_moment_equations(transition_classes, moments)
+        equations = compute_moment_equations(transition_classes, moments,
+                                            substitutions=custom_substitutions, 
+                                            clna=clna)
+        equations = substitute_closures(equations, custom_closures) #test
         missing = get_missing_moments(equations)
         gamma = []
         meanfield = []
@@ -56,6 +63,7 @@ def automated_moment_equations(D, transition_classes, moments=None, display_deta
                 closures += meanfield_closures(not_closed)
             # Now substitute the closures (gamma, possibly augmented by mean-field)
             equations = substitute_closures(equations, closures)
+        equations = apply_substitutions(equations, custom_substitutions)
         # Either there were no missing moments or closures have been substituted, we're done.
         if not isinstance(details, AutomatedMomentClosureDetails):
             details = AutomatedMomentClosureDetails()

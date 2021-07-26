@@ -1,8 +1,10 @@
 from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, \
-    factorial, ff
+    factorial, ff, hessian, Matrix, reshape
 from sympy.core.decorators import call_highest_priority
 import itertools
 import collections
+
+from sys import stderr
 
 
 ###################################################
@@ -210,6 +212,33 @@ class OutcomeDistribution(object):
 
         return OutcomeDistribution(symbol, expectation)
 
+    @classmethod
+    def StemCell(cls, symbol, D, y, yp, x, xp):
+        """
+        Returns an OutcomeDistribution that matches the StemCell case study of Duso2020.
+
+        :param symbol: symbol to use when displaying Pi_c in equations
+        :param y: random variable, entry in a content variable, e.g., y
+        :param yp: random variable, entry in a content variable, e.g., yp
+        :param x: random variable, entry in a content variable, e.g., x
+        :param xp: random variable, entry in a content variable, e.g., xp
+        :return Pi_c:
+        """
+        import sys
+
+        def expectation(pDMcj):
+            # print("pDMcj=%s" %(pDMcj), file=sys.stderr) #debug
+            # print("vars(pDMcj)=%s" %(_getContentVars(pDMcj)), file=sys.stderr) #debug
+            a = pDMcj.subs( y[0],  x[0]).subs(yp[0], 1-xp[0])
+            b = pDMcj.subs(yp[0], xp[0]).subs( y[0], 1- x[0])
+            for i in range(1,D):
+                a = a.subs( y[i], x[i]).subs(yp[i],xp[i])
+                b = b.subs(yp[i],xp[i]).subs( y[i], x[i])
+            # print("E[pDMcj]=%s" %((a+b)/2), file=sys.stderr) #debug
+            return (a+b)/2
+
+        return OutcomeDistribution(symbol, expectation)
+
     #@classmethod
     #def Binomial(cls, symbol, y, n, p):
     #    """
@@ -238,7 +267,8 @@ class OutcomeDistribution(object):
 # -------------------------------------------------
 class TransitionClass(Basic):
     """
-    Transition class comprising a Transition, a content-independent rate constant k, a reactant tuning function g, and the outcome distribuiton pi
+    Transition class comprising a Transition, a content-independent rate constant k, 
+    a reactant tuning function g, and the outcome distribuiton pi
     """
 
     def __new__(cls, transition, k, g=1, pi=OutcomeDistribution.Identity(), name=None):
@@ -308,7 +338,9 @@ def _getContentVars(expr):
     :param Expr expr: Compartment, Content, ContentChange, sums of those, and multiplication by integers
     :returns: set of Content variables
     """
-    if expr.func in [Add, Mul, Compartment, ContentChange]:
+    import sys
+
+    if expr.func in [Add, Mul, Pow, Compartment, ContentChange]:
         return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
     elif expr.func == Content:
         return {expr}
@@ -318,8 +350,13 @@ def _getContentVars(expr):
         return set()
     elif issubclass(expr.func, Integer):
         return set()
+    elif len(expr.args) == 0:
+        return set()
     else:
-        raise TypeError("Unexpected expression " + str(expr))
+        print("Warning: Unexpected expression " + str(expr) + ", taking default branch!", file=sys.stderr)
+        return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
+        # print("expr.func=%s" %(expr.func), file=sys.stderr)
+        # raise TypeError("Unexpected expression " + str(expr))
 
 
 # -------------------------------------------------
@@ -827,7 +864,7 @@ def _getNumSpecies(expr):
 
 
 # -------------------------------------------------
-def get_dfMdt_contrib(reactants, l_n_Xc, D):
+def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False):
     """
     Compute the contribution to df(M)/dt of a particular transition and a particular monomial.
 
@@ -864,15 +901,68 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D):
         x1 = compartment2.args[0]
         monomials = __decomposeContentPolynomial2(l_n_Xc, x, x1, D)
         replaced1 = [k / 2 * Moment(*alpha) * Moment(*beta) for (k, alpha, beta) in monomials]
+        if clna==True:
+            def _linearizeProduct(a,b):
+                # This is a simple 2D truncated taylor expansion of the a*b product around (<a>,<b>)
+                return ( Expectation(a)*Expectation(b)
+                        + Expectation(b)*(a-Expectation(a))
+                        + Expectation(a)*(b-Expectation(b))
+                        ) 
+            replaced1 = [k / 2 * _linearizeProduct( Moment(*alpha), Moment(*beta) ) 
+                            for (k, alpha, beta) in monomials]
         monomials = __decomposeContentPolynomial(l_n_Xc.subs(x1, x), x, D)
         replaced2 = [k / 2 * Moment(*alpha) for (k, alpha) in monomials]
         return Add(*replaced1) - Add(*replaced2)
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
 
+def _getGradient(cf, D, Vars):
+    return [ cf.diff(v[i]) for i in range(D) for v in Vars ]
+    # return [ cf.diff(v[i]).subs(KroneckerDelta(1,v[1]),1).simplify() for i in range(D) for v in Vars ]
+
+def _evaluateMultidim(expr, D, Vars, linearizationPoint):
+    e = expr
+    for i in range(D):
+        for v in Vars:
+            e = e.subs(v[i], linearizationPoint[i])
+    return e
+
+def _getLinearizationPoint(D):
+    lp = []
+    zeroth = (0,)*D
+    for i in range(D):
+        exponent = ( *( (0,)*i ), 1, *( (0,)*(D-i-1) ) )
+        linearizationPoint = Expectation(Moment(*exponent)) / Expectation(Moment(*zeroth))
+        lp.append(linearizationPoint)
+    return lp
+
+def _linearizeContentFunction(cf, D, useHessian=False):
+    # print("cf=%s" %(cf)) #debug
+    Vars = _getContentVars(cf)
+    if len(Vars)==0:
+        return cf
+    lp = _getLinearizationPoint(D)
+    # Test sanitizing pesky kroneckers
+    for i in range(D):
+        for v in Vars:
+            cf = cf.subs(KroneckerDelta(1,v[i]), lp[i])
+            # cf = cf.subs(KroneckerDelta(0,v[i]), 1-lp[i])
+    Grad = _getGradient(cf, D, Vars)
+    cf0 = _evaluateMultidim(cf, D, Vars, lp)
+    Grad0 = [ _evaluateMultidim(g, D, Vars, lp) for g in Grad ]
+    lcf = cf0
+    j=0
+    for i in range(D):
+        # Iterate on all the species
+        for v in Vars:
+            # Iterate on all the content-symbols
+            lcf += Grad0[j] * (v[i] - lp[i])
+            j += 1
+    # print("lin(cf)=%s" %(lcf)) #debug
+    return lcf
 
 # -------------------------------------------------
-def get_dfMdt(transition_classes, fM, D):
+def get_dfMdt(transition_classes, fM, D, clna=False):
     """
     Given a function of Moments f(M) and a set of transitions classes, compute the derivative df(M)/dt.
 
@@ -880,6 +970,7 @@ def get_dfMdt(transition_classes, fM, D):
     :param fM: a function of Moments
     :param D: number of species
     """
+    import sys
     if _getNumSpecies(fM) != D:
         raise RuntimeError(f'Arities of all occurring moments should be {D}. ({fM})')
     dfM = ito(fM)
@@ -892,9 +983,15 @@ def get_dfMdt(transition_classes, fM, D):
             products = getCompartments(transition.rhs)
             DM_cj = getDeltaM(reactants, products, D)
             pDMcj = subsDeltaM(pDM, DM_cj)
+            # print("pDMcj = %s" %(pDMcj), file=sys.stderr) #debug
             cexp = pi_c.conditional_expectation(pDMcj)
-            l_n_Xc = k_c * k_q * pM * g_c * cexp
-            dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D)
+            contentFun = g_c * cexp
+            # clna autoclosure for content function
+            if clna==True:
+                contentFun = _linearizeContentFunction(contentFun, D)
+            #
+            l_n_Xc = k_c * k_q * pM * contentFun
+            dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D, clna=clna)
             contrib.append(dfMdt)
     return Add(*contrib)
 
@@ -957,6 +1054,8 @@ def _getAndVerifyNumSpecies(transition_classes, moments, D=None):
     """
     for fM in moments:
         DfM = _getNumSpecies(fM)
+        # print("D=%s" %(D), file=stderr)
+        # print("DfM=%s" %(DfM), file=stderr)
         if D is None:
             D = DfM
         if D != DfM:
@@ -985,8 +1084,21 @@ def getRequiredMoments(dfMdt):
             required.add(M)
     return required
 
+def apply_substitutions(equations, substitutions):
+    """
+    Perform raw term substitutions.
 
-def compute_moment_equations(transition_classes, moments, D=None):
+    :param equations: list of pairs (fM, dfMdt). (as returned by compute_moment_equations)
+    :param substitutions: list of tuples of (expr, substitution(expr))
+    :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by substituting closed moments into dfMdt
+    """
+    substitutions = {m: c for m, c in substitutions}
+    print("Substitutions: %s" %(substitutions)) #debug
+    subs_equations = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in equations]
+    return subs_equations
+
+
+def compute_moment_equations(transition_classes, moments, substitutions=[], D=None, clna=False):
     """
     Given a reaction network, moment expressions, and number of species, computes
     a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression
@@ -994,6 +1106,7 @@ def compute_moment_equations(transition_classes, moments, D=None):
 
     :param transition_classes: list of all transition classes of the reaction network
     :param moments: a list of functions of Moments
+    :param substitutions: list of tuples of (expr, substitution(expr)) to be substituted before taking the expectation
     :param D: optionally, the number of species
     :return: list of pairs (fM, dfMdt)
     """
@@ -1001,7 +1114,8 @@ def compute_moment_equations(transition_classes, moments, D=None):
     equations = list()
     required = set()
     for fM in moments:
-        dfMdt = get_dfMdt(transition_classes, fM, D)
+        dfMdt = get_dfMdt(transition_classes, fM, D, clna=clna)
+        dfMdt = dfMdt.subs(substitutions)
         equations.append((fM, _expectation(dfMdt)))
     return equations
 

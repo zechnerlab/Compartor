@@ -1,6 +1,7 @@
 from .compartments import (
     Content, ContentChange, Compartment, EmptySet, Transition, TransitionClass,
-    Constant, OutcomeDistribution, Moment, compute_moment_equations, get_missing_moments)
+    Constant, OutcomeDistribution, Moment, Expectation,
+    compute_moment_equations, get_missing_moments)
 from .syntactic_sugar import to
 from .display import (
     display_transition_classes, display_propensity_details,
@@ -13,7 +14,7 @@ from .automated import automated_moment_equations
 __all__ = [
     # compartor.compartments
     'Content', 'ContentChange', 'Compartment', 'EmptySet', 'Transition',
-    'TransitionClass','Constant', 'OutcomeDistribution', 'Moment',
+    'TransitionClass','Constant', 'OutcomeDistribution', 'Moment', 'Expectation',
     'compute_moment_equations', 'get_missing_moments',
 
     # compartor.syntactic_sugar
