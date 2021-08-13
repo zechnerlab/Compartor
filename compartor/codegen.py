@@ -1,5 +1,6 @@
-from sympy import Add, Mul, Pow, Number, Symbol, simplify
+from sympy import Add, Mul, Pow, Number, Symbol, simplify, Function
 from compartor.compartments import Moment, Expectation
+from sys import stderr
 
 import itertools
 import collections
@@ -10,10 +11,21 @@ import collections
 def _get_constants(expr):
     if isinstance(expr, collections.abc.Iterable): # assuming it is an iterable of (fM, dfMdt) tuples
         return set(itertools.chain(*(_get_constants(dfMdt) for _, dfMdt in expr)))
+    # elif expr.func == Mul and expr.args[1].func == Pow \
+    #         and expr.args[1].args[0].func == Expectation \
+    #         and expr.args[1].args[1] == -1:
+    #     # Now let's try to catch the linearization points!
+    #     return {expr}
     elif expr.func in [Add, Mul, Pow, Expectation]:
         return set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
     elif expr.func == Moment or issubclass(expr.func, Number):
         return {}
+    elif issubclass(expr.func, Function): # This has to be after Moment!
+        # print("Expr: %s" %(expr), file=stderr)
+        # print("Args: %s" %(expr.args), file=stderr)
+        # res = set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
+        # print(res, file=stderr) #debug
+        return set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
     else:
         return {expr}
 
@@ -188,6 +200,21 @@ class _expr_pow:
                 return c
         return self.generator.format_pow(paren(self.base), paren(self.exponent))
 
+class _expr_function:
+    def __init__(self, function, args):
+        self.function = function
+        self.args = args
+
+    def code(self):
+        nargs = len(self.args)
+        f = repr(self.function)
+        c = f'{f}('
+        for (i,arg) in enumerate(self.args):
+            c += arg.code()
+            if i < nargs-1:
+                c += ', '
+        c += ')'
+        return c
 
 # -------------------------------------------------
 class AbstractCodeGenerator:
@@ -310,6 +337,8 @@ class AbstractCodeGenerator:
             return _expr_atom(self.gen_M(expr.args[0]))
         elif issubclass(expr.func, Number):
             return _expr_atom(expr)
+        elif issubclass(expr.func, Function):
+            return _expr_function(expr.func, [ self._gen_code_expr(x) for x in expr.args ])
         else:
             return _expr_atom(self.gen_constant(expr))
 
@@ -430,6 +459,14 @@ class GenerateJulia(AbstractCodeGenerator):
     def format_pow(self, base, exp):
         return f'{base}^{exp}'
 
+    def _default_constant_initializers(self, equations):
+        key = lambda x: str(x) # Use lexicographic ordering
+        constants = sorted(_get_constants(equations), key=key)
+        return collections.OrderedDict(
+            ( constant, f'parameters[:{ str(constant).replace("_","") }] ' 
+                + self.format_comment(f'{ str(constant).replace("_","") }'))
+            for i, constant in enumerate(constants) )
+
     def generate(self, equations, function_name = "generated"):
         self._init_dictionaries(equations)
 
@@ -445,7 +482,7 @@ class GenerateJulia(AbstractCodeGenerator):
         self.append_comment("initialize expected moments vector")
         self.append_statement(f'function {function_name}_initial(n0)')
         self.indent(2)
-        self.append_statement(f'M=zeros[{len(equations)}]')
+        self.append_statement(f'M = zeros({len(equations)})')
         self.gen_initial_body(equations)
         self.append_statement("return M")
         self.indent(-2)
