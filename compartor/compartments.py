@@ -152,6 +152,20 @@ class OutcomeDistribution(object):
         return cls._identity
 
     @classmethod
+    def CombineIndependent(cls, symbol, *distributions):
+        """
+        Combines an arbitrary number of previously defined outcome distributions.
+        These should involve different chemical species each and be independent!
+        """
+        def expectation(pDMcj):
+            cur = pDMcj
+            for d in distributions:
+                cur = d.conditional_expectation(cur)
+            return cur
+
+        return OutcomeDistribution(symbol, expectation)
+
+    @classmethod
     def Poisson(cls, symbol, y, rate):
         """
         Returns an OutcomeDistribution that is a Poisson distribution of y
