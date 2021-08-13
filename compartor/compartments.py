@@ -1,5 +1,5 @@
 from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, \
-    factorial, ff, hessian, Matrix, reshape
+    factorial, ff, hessian, Matrix, reshape, symbols
 from sympy.core.decorators import call_highest_priority
 import itertools
 import collections
@@ -241,15 +241,11 @@ class OutcomeDistribution(object):
         import sys
 
         def expectation(pDMcj):
-            # print("pDMcj=%s" %(pDMcj), file=sys.stderr) #debug
-            # print("vars(pDMcj)=%s" %(_getContentVars(pDMcj)), file=sys.stderr) #debug
-            a = pDMcj.subs( y[0],  x[0]).subs(yp[0], 1-xp[0])
-            b = pDMcj.subs(yp[0], xp[0]).subs( y[0], 1- x[0])
-            for i in range(1,D):
+            a = pDMcj.subs( y[0], 1).subs( y[1], x[1])
+            a =     a.subs(yp[0], 0).subs(yp[1], 0)
+            for i in range(2,D):
                 a = a.subs( y[i], x[i]).subs(yp[i],xp[i])
-                b = b.subs(yp[i],xp[i]).subs( y[i], x[i])
-            # print("E[pDMcj]=%s" %((a+b)/2), file=sys.stderr) #debug
-            return (a+b)/2
+            return a
 
         return OutcomeDistribution(symbol, expectation)
 
@@ -354,7 +350,8 @@ def _getContentVars(expr):
     """
     import sys
 
-    if expr.func in [Add, Mul, Pow, Compartment, ContentChange]:
+    if expr.func in [Add, Mul, Pow, Compartment, ContentChange] \
+            or issubclass(expr.func, Function):
         return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
     elif expr.func == Content:
         return {expr}
@@ -369,7 +366,6 @@ def _getContentVars(expr):
     else:
         print("Warning: Unexpected expression " + str(expr) + ", taking default branch!", file=sys.stderr)
         return set(itertools.chain(*(_getContentVars(arg) for arg in expr.args)))
-        # print("expr.func=%s" %(expr.func), file=sys.stderr)
         # raise TypeError("Unexpected expression " + str(expr))
 
 
@@ -876,9 +872,39 @@ def _getNumSpecies(expr):
         raise RuntimeError("Number of species in Moments occurring in expression is not unique."
                            + str(expr) + " contains moments of orders " + str(Ds))
 
+def _sanitizeGammaForBooleans(gamma, boolean_variables):
+    for i in boolean_variables:
+        if gamma[i] > 1:
+            gamma[i] = 1 # Higher powers don't matter here!
+    return gamma
+
+def _sanitizeMonomialsForBooleans(monomials, boolean_variables):
+    for (i, mon) in enumerate(monomials):
+        if len(mon) == 2:
+            k, alpha = mon
+            monomials[i] = ( k, _sanitizeGammaForBooleans(alpha, boolean_variables) )
+        elif len(mon) == 3:
+            k, alpha, beta = mon
+            monomials[i] = ( 
+                        k, 
+                        _sanitizeGammaForBooleans(alpha, boolean_variables),
+                        _sanitizeGammaForBooleans(beta, boolean_variables) 
+                        )
+        else:
+            raise RuntimeError("Monomials must have either 2 or 3 elements! Got: %d" %(len(mon)))
+    return monomials
+
+def _areBooleansInvolved(alpha, beta, boolean_variables):
+    print("CHECK BOOLS: alpha=%s, beta=%s, boolean_variables=%s"%(alpha, beta, boolean_variables), file=stderr) #debug
+    for i in boolean_variables:
+        if alpha[i]>0 or beta[i]>0:
+            print("BOOLEANS INVOLVED! alpha=%s, beta=%s"%(alpha, beta), file=stderr) #debug
+            raise RuntimeError("CULO!")
+            return True
+    return False
 
 # -------------------------------------------------
-def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False):
+def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False, boolean_variables=set()):
     """
     Compute the contribution to df(M)/dt of a particular transition and a particular monomial.
 
@@ -898,6 +924,7 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False):
         # compartment==[x]
         x = compartment.args[0]
         monomials = __decomposeContentPolynomial(l_n_Xc, x, D)
+        monomials = _sanitizeMonomialsForBooleans(monomials, boolean_variables)
         replaced = [k * Moment(*alpha) for (k, alpha) in monomials]
         return Add(*replaced)
     elif len(reactants) == 2:
@@ -914,6 +941,7 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False):
         x = compartment1.args[0]
         x1 = compartment2.args[0]
         monomials = __decomposeContentPolynomial2(l_n_Xc, x, x1, D)
+        monomials = _sanitizeMonomialsForBooleans(monomials, boolean_variables)
         replaced1 = [k / 2 * Moment(*alpha) * Moment(*beta) for (k, alpha, beta) in monomials]
         if clna==True:
             def _linearizeProduct(a,b):
@@ -922,10 +950,18 @@ def get_dfMdt_contrib(reactants, l_n_Xc, D, clna=False):
                         + Expectation(b)*(a-Expectation(a))
                         + Expectation(a)*(b-Expectation(b))
                         ) 
-            replaced1 = [k / 2 * _linearizeProduct( Moment(*alpha), Moment(*beta) ) 
-                            for (k, alpha, beta) in monomials]
+            for (i, mon) in enumerate(monomials):
+                k, alpha, beta = mon
+                if not _areBooleansInvolved(alpha, beta, boolean_variables):
+                    replaced1[i] = k / 2 * _linearizeProduct( Moment(*alpha), Moment(*beta) )
+            # replaced1 = [k / 2 * _linearizeProduct( Moment(*alpha), Moment(*beta) ) 
+            #                 for (k, alpha, beta) in monomials]
         monomials = __decomposeContentPolynomial(l_n_Xc.subs(x1, x), x, D)
+        monomials = _sanitizeMonomialsForBooleans(monomials, boolean_variables)
         replaced2 = [k / 2 * Moment(*alpha) for (k, alpha) in monomials]
+        print("\tl_n_Xc: %s" %(l_n_Xc), file=stderr) #debug
+        print("\treplaced1: %s" %(replaced1), file=stderr) #debug
+        print("\treplaced2: %s" %(replaced2), file=stderr) #debug
         return Add(*replaced1) - Add(*replaced2)
     else:
         raise RuntimeError("Higher than 2nd order transitions are not implemented yet")
@@ -938,29 +974,28 @@ def _evaluateMultidim(expr, D, Vars, linearizationPoint):
     e = expr
     for i in range(D):
         for v in Vars:
-            e = e.subs(v[i], linearizationPoint[i])
+            if linearizationPoint[i] != None:
+                e = e.subs(v[i], linearizationPoint[i])
     return e
 
-def _getLinearizationPoint(D):
+def _getLinearizationPoint(D, boolean_variables):
     lp = []
     zeroth = (0,)*D
     for i in range(D):
-        exponent = ( *( (0,)*i ), 1, *( (0,)*(D-i-1) ) )
-        linearizationPoint = Expectation(Moment(*exponent)) / Expectation(Moment(*zeroth))
+        linearizationPoint = None
+        if i not in boolean_variables:
+            exponent = ( *( (0,)*i ), 1, *( (0,)*(D-i-1) ) )
+            linearizationPoint = Expectation(Moment(*exponent)) / Expectation(Moment(*zeroth))
         lp.append(linearizationPoint)
     return lp
 
-def _linearizeContentFunction(cf, D, useHessian=False):
-    # print("cf=%s" %(cf)) #debug
+def _linearizeContentFunction(cf, D, boolean_variables):
     Vars = _getContentVars(cf)
     if len(Vars)==0:
         return cf
-    lp = _getLinearizationPoint(D)
-    # Test sanitizing pesky kroneckers
-    for i in range(D):
-        for v in Vars:
-            cf = cf.subs(KroneckerDelta(1,v[i]), lp[i])
-            # cf = cf.subs(KroneckerDelta(0,v[i]), 1-lp[i])
+    # lp = _getLinearizationPoint(D, boolean_variables) # Exclude booleans from lin
+    lp = _getLinearizationPoint(D, set()) # Let's linearize everything -> This works!
+
     Grad = _getGradient(cf, D, Vars)
     cf0 = _evaluateMultidim(cf, D, Vars, lp)
     Grad0 = [ _evaluateMultidim(g, D, Vars, lp) for g in Grad ]
@@ -969,26 +1004,67 @@ def _linearizeContentFunction(cf, D, useHessian=False):
     for i in range(D):
         # Iterate on all the species
         for v in Vars:
-            # Iterate on all the content-symbols
-            lcf += Grad0[j] * (v[i] - lp[i])
+            # Iterate on all the content-symbols (if species not boolean)
+            if i not in boolean_variables:
+                lcf += Grad0[j] * (v[i] - lp[i])
             j += 1
-    # print("lin(cf)=%s" %(lcf)) #debug
+
     return lcf
 
+def _getBooleanVariablesIndices(expr, D):
+    # Check if the current expression contains any KroneckerDelta() and keep
+    # track of the indices where they appear!
+    Vars = _getContentVars(expr)
+    BV = set()
+    for v in Vars:
+        for i in range(D):
+            check = expr.find( KroneckerDelta(v[i], 1) )
+            check.update( expr.find( KroneckerDelta(v[i], 0) ) )
+            if len(check)>0:
+                BV.add(i)
+    return BV
+
+def _handleBooleanVariables(expr, D, boolean_variables):
+    Vars = _getContentVars(expr)
+
+    for (j,v) in enumerate(Vars):
+        for i in boolean_variables:
+            # Dummy temporary symbols for KroneckerDeltas
+            k0, k1 = symbols('k0 k1')
+            # Folding powers 1:3 into one symbol
+            sub1 = [ ( KroneckerDelta(1, v[i])**k, k1 ) for k in range(1,4) ]
+            sub0 = [ ( KroneckerDelta(0, v[i])**k, k0 ) for k in range(1,4) ]
+            expr = expr.subs(sub1)
+            expr = expr.subs(sub0)
+            # Make sure that KroneckerDelta(x,0)*x -> 0
+            expr = expr.subs(k0*v[i], 0)
+            # Now remove any power of v[i] by substituting it with 1
+            expr = expr.subs(v[i], 1)
+            # Now replace the KroneckerDeltas' dummies with their "meaning"
+            expr = expr.subs(k1, v[i])
+            expr = expr.subs(k0, 1-v[i] )
+    return expr
+
 # -------------------------------------------------
-def get_dfMdt(transition_classes, fM, D, clna=False):
+def get_dfMdt(transition_classes, fM, D, clna=False, substitutions=[], boolean_variables=set()):
     """
     Given a function of Moments f(M) and a set of transitions classes, compute the derivative df(M)/dt.
 
     :param transition_classes: list of transition classes
     :param fM: a function of Moments
     :param D: number of species
+    :param clna=False: use the clna approximation mode
+    :param substitutions=[]: pass a list of raw custom substitutions to use
+    :param boolean_variables=set(): a set of variables indices to be treated as 
+    boolean. New vars will be added here to be used again in the caller.
     """
     import sys
     if _getNumSpecies(fM) != D:
         raise RuntimeError(f'Arities of all occurring moments should be {D}. ({fM})')
     dfM = ito(fM)
+    print("dfM: %s" %(dfM), file=stderr) #debug
     monomials = decomposeMomentsPolynomial(dfM)
+    print("monomials: %s" %(monomials), file=stderr) #debug
     contrib = list()
     for c, tc in enumerate(transition_classes):
         transition, k_c, g_c, pi_c = tc.transition, tc.k, tc.g, tc.pi
@@ -997,15 +1073,33 @@ def get_dfMdt(transition_classes, fM, D, clna=False):
             products = getCompartments(transition.rhs)
             DM_cj = getDeltaM(reactants, products, D)
             pDMcj = subsDeltaM(pDM, DM_cj)
-            # print("pDMcj = %s" %(pDMcj), file=sys.stderr) #debug
             cexp = pi_c.conditional_expectation(pDMcj)
             contentFun = g_c * cexp
+            cF = None
+            while cF != contentFun:
+                cF = contentFun
+                contentFun = cF.expand().subs(substitutions) # Test manual simplifications
+
+            # Discover any boolean variable in the current expression and
+            # add them to the global set
+            curBV = _getBooleanVariablesIndices(contentFun, D)
+            boolean_variables.update(curBV)
+            # Handle the boolean variables for this expression
+            contentFun = _handleBooleanVariables(contentFun, D, boolean_variables)
+            print("contentFun: %s" %(contentFun), file=stderr) #debug
             # clna autoclosure for content function
             if clna==True:
-                contentFun = _linearizeContentFunction(contentFun, D)
+                contentFun = _linearizeContentFunction(
+                                contentFun, 
+                                D, 
+                                boolean_variables
+                                ).expand().subs(substitutions).simplify()
+                print("contentFun_clna: %s" %(contentFun), file=stderr) #debug
             #
             l_n_Xc = k_c * k_q * pM * contentFun
-            dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D, clna=clna)
+            dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D, 
+                clna=clna, boolean_variables=boolean_variables).simplify()
+            print("dfMdt: %s" %(dfMdt), file=stderr) #debug
             contrib.append(dfMdt)
     return Add(*contrib)
 
@@ -1068,8 +1162,6 @@ def _getAndVerifyNumSpecies(transition_classes, moments, D=None):
     """
     for fM in moments:
         DfM = _getNumSpecies(fM)
-        # print("D=%s" %(D), file=stderr)
-        # print("DfM=%s" %(DfM), file=stderr)
         if D is None:
             D = DfM
         if D != DfM:
@@ -1082,7 +1174,6 @@ def _getAndVerifyNumSpecies(transition_classes, moments, D=None):
         for c in getCompartments(tc.transition.rhs).keys():
            _verifyContentNumSpecies(c.args[0], D)
     return D
-
 
 ###################################################
 #
@@ -1107,12 +1198,16 @@ def apply_substitutions(equations, substitutions):
     :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by substituting closed moments into dfMdt
     """
     substitutions = {m: c for m, c in substitutions}
-    print("Substitutions: %s" %(substitutions)) #debug
+    # print("Substitutions: %s" %(substitutions)) #debug
     subs_equations = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in equations]
     return subs_equations
 
 
-def compute_moment_equations(transition_classes, moments, substitutions=[], D=None, clna=False):
+def compute_moment_equations(transition_classes, moments, 
+                                substitutions=[], D=None, 
+                                clna=False,
+                                boolean_variables=set(),
+                                ):
     """
     Given a reaction network, moment expressions, and number of species, computes
     a list of pairs `(fM, dfMdt)`, where each pair consists of the desired moment expression
@@ -1127,10 +1222,18 @@ def compute_moment_equations(transition_classes, moments, substitutions=[], D=No
     D = _getAndVerifyNumSpecies(transition_classes, moments, D)
     equations = list()
     required = set()
-    for fM in moments:
-        dfMdt = get_dfMdt(transition_classes, fM, D, clna=clna)
-        dfMdt = dfMdt.subs(substitutions)
-        equations.append((fM, _expectation(dfMdt)))
+    if type(clna)!=list:
+        clna = [ clna for x in moments ]
+    elif len(clna)<len(moments):
+        clna = [ clna[i] if i<len(clna) else True for i in range(len(moments)) ]
+    for (fM,curClna) in zip(moments, clna):
+        dfMdt = get_dfMdt(transition_classes, fM, D, 
+                            clna=curClna, 
+                            substitutions=substitutions,
+                            boolean_variables=boolean_variables,
+                            )
+        dfMdt = dfMdt.expand().subs(substitutions).simplify()
+        equations.append(( fM, _expectation(dfMdt).simplify() ))
     return equations
 
 
