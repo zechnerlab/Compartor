@@ -18,7 +18,7 @@ numpy==1.19.5
     # via
     #   matplotlib
     #   scipy
-pillow==8.2.0
+pillow==8.3.2
     # via matplotlib
 pyparsing==2.4.7
     # via matplotlib
