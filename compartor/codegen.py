@@ -390,6 +390,7 @@ class AbstractCodeGenerator:
     def _default_constant_variables(self, equations):
         constants = _get_constants(equations)
         return {constant: f'c{i}' for i, constant in enumerate(constants)}
+        # return {constant: f'{str(constant)}' for i, constant in enumerate(constants)}
 
     def _default_constant_initializers(self, equations):
         constants = _get_constants(equations)
@@ -457,7 +458,7 @@ class GenerateJulia(AbstractCodeGenerator):
         return f'# {text}'
 
     def format_pow(self, base, exp):
-        return f'{base}^{exp}'
+        return f'(({base})^({exp}))'
 
     def _default_constant_initializers(self, equations):
         key = lambda x: str(x) # Use lexicographic ordering
