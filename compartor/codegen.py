@@ -2,6 +2,8 @@ from sympy import Add, Mul, Pow, Number, Symbol, simplify, Function
 from compartor.compartments import Moment, Expectation
 from sys import stderr
 
+from sympy import poly, horner # For horner scheme poly evaluation
+
 import itertools
 import collections
 
@@ -428,7 +430,9 @@ class AbstractCodeGenerator:
         for fM, dfMdt in equations:
             # c = gen_comment_text(fM)
             # self.append_statement(f'# {"???" if c is None else c}')
-            c = self._gen_code_expr(simplify(dfMdt)).code()
+            # c = self._gen_code_expr(simplify(dfMdt)).code()
+            H = horner(poly(dfMdt.expand()))
+            c = self._gen_code_expr(H).code()
             c = c.replace("-1*", "-")
             comment = _gen_comment_text(fM)
             if self.gen_moment_comments and comment:
