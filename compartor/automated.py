@@ -3,6 +3,9 @@ from compartor.compartments import Moment, Expectation, compute_moment_equations
 from compartor.compartments import debug, info, warn, error
 from sys import stderr
 
+from time import time
+from datetime import timedelta
+
 class AutomatedMomentClosureDetails():
     def __init__(self):
         self.desired = []
@@ -19,6 +22,7 @@ def automated_moment_equations(D, transition_classes,
                                 boolean_variables=set(),
                                 known_moments=set(),
                                 apply_closures=False,
+                                simplify_equations=False,
                                 ):
     """
     Outputs a closed system of moment equations for the provided transition classes.
@@ -46,6 +50,7 @@ def automated_moment_equations(D, transition_classes,
     added = []
     equations = list()
     curMoments = moments
+    t0 = time()
     while True:
         curEquations = compute_moment_equations(transition_classes, curMoments,
                                             substitutions=custom_substitutions, 
@@ -53,6 +58,7 @@ def automated_moment_equations(D, transition_classes,
                                             D=D,
                                             order=order,
                                             boolean_variables=boolean_variables,
+                                            simplify_equations=simplify_equations,
                                             )
         equations.extend(curEquations)
         missing = get_missing_moments(curEquations, known_moments=moments)
@@ -84,7 +90,8 @@ def automated_moment_equations(D, transition_classes,
             # print("::: Closures: %s" %(closures)) #debug
             if apply_closures:
                 equations = substitute_closures(equations, closures) # Commented as DEBUG
-        info("> Automated Moment Equations: #equations=%d" %(len(equations)))
+        dt = time() - t0
+        info("> Automated Moment Equations: #equations=%d [%s]" %(len(equations), str(timedelta(seconds=dt))))
         # equations = apply_substitutions(equations, custom_substitutions) #test
         # Either there were no missing moments or closures have been substituted, we're done.
         if not isinstance(details, AutomatedMomentClosureDetails):

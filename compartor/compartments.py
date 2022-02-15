@@ -1,6 +1,10 @@
-from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, Add, Mul, Pow, Integer, Eq, KroneckerDelta, \
+from sympy import Function, IndexedBase, Indexed, Basic, Symbol, EmptySet, \
+    Add, Mul, Pow, Integer, Eq, KroneckerDelta, \
     factorial, ff, hessian, Matrix, reshape, symbols, simplify
 from sympy.core.decorators import call_highest_priority
+
+from time import time
+from datetime import timedelta
 
 import itertools
 import collections
@@ -10,17 +14,17 @@ from sys import stderr
 debugEnabled = False
 infoEnabled = True
 warningEnabled = True
-def debug(*args):
-    print(*args, file=stderr) if debugEnabled else None
+def debug(*args, **kwargs):
+    print(*args, file=stderr, **kwargs) if debugEnabled else None
 
-def info(*args):
-    print(*args, file=stderr) if infoEnabled else None
+def info(*args, **kwargs):
+    print(*args, file=stderr, **kwargs) if infoEnabled else None
 
-def warn(*args):
-    print(*args, file=stderr) if warningEnabled else None
+def warn(*args, **kwargs):
+    print(*args, file=stderr, **kwargs) if warningEnabled else None
 
-def error(*args):
-    print(*args, file=stderr)
+def error(*args, **kwargs):
+    print(*args, file=stderr, **kwargs)
     raise RuntimeError("ERROR!")
 
 
@@ -253,7 +257,7 @@ class OutcomeDistribution(object):
             exp = Sum(
                 pDMcj,
                 (y, start, end)
-            ).doit().factor()
+            ).doit()
             exp /= p
             return exp.factor()
 
@@ -305,7 +309,7 @@ class OutcomeDistribution(object):
             #             (y, 0, n)
             #             ).doit().factor()
             # exp /= n+1
-            debug(">> Binomial: exp = %s" %(exp)) #debug
+            # debug(">> Binomial: exp = %s" %(exp)) #debug
             return exp.factor()
 
         return OutcomeDistribution(symbol, expectation)
@@ -823,7 +827,8 @@ def __getKnownMomentsSubstitutions(known_moments):
 
 # -------------------------------------------------
 def __extractMonomials(expr):
-    expr = expr.factor().expand()
+    # expr = expr.factor().expand() # Slow factor()
+    expr = expr.expand() # Faster, and it should be same result
     monomials = list(expr.args) if expr.func == Add else [expr]
     return monomials
 
@@ -932,7 +937,8 @@ def __decomposeContentPolynomial(expr, x, D, order=2, boolean_variables=set(), c
     :return: list of monomials, each decomposed into (constant, alpha)
     """
     if clna:
-        expr = _expandContentFunction(expr, D, order=order, boolean_variables=boolean_variables).factor()
+        expr = _expandContentFunction(expr, D, order=order, boolean_variables=boolean_variables)
+        # expr = expr.factor()
     monomials = __extractMonomials(expr)
     result = list()
     for monomial in monomials:
@@ -954,7 +960,8 @@ def __decomposeContentPolynomial2(expr, x, y, D, order=2, boolean_variables=set(
     """
     
     if clna:
-        expr = _expandContentFunction(expr, D, order=2, boolean_variables=boolean_variables).factor()
+        expr = _expandContentFunction(expr, D, order=2, boolean_variables=boolean_variables)
+        # expr = expr.factor()
     monomials = __extractMonomials(expr)
     result = list()
     for monomial in monomials:
@@ -1317,12 +1324,12 @@ def get_dfMdt(transition_classes, fM, D, order=2,
     for c, tc in enumerate(transition_classes):
         transition, k_c, g_c, pi_c = tc.transition, tc.k, tc.g, tc.pi
         for q, (k_q, pM, pDM) in enumerate(monomials):
-            debug(">>> (%d) fM: %s\tpM: %s\tpDM: %s" %(c,fM,pM,pDM)) #debug
+            # debug(">>> (%d) fM: %s\tpM: %s\tpDM: %s" %(c,fM,pM,pDM)) #debug
             reactants = getCompartments(transition.lhs)
             products = getCompartments(transition.rhs)
             DM_cj = getDeltaM(reactants, products, D)
             pDMcj = subsDeltaM(pDM, DM_cj)
-            cexp = pi_c.conditional_expectation(pDMcj)
+            cexp = pi_c.conditional_expectation(pDMcj) #Expensive!
             contentFun = g_c * cexp
             cF = None
             while cF != contentFun:
@@ -1346,18 +1353,20 @@ def get_dfMdt(transition_classes, fM, D, order=2,
                 #                 boolean_variables
                 #                 ).expand().subs(substitutions).simplify()
                 # debug("contentFun_clna: %s" %(contentFun)) #debug
+
+                #Expensive!
                 dfMdt = get_dfMdt_contrib_clna(reactants, contextFun, contentFun, D, 
                         order=order,
                         boolean_variables=boolean_variables,
                         # clna=False, #debug
                         )
+
                 # Now let's take care to expand in w
                 # We first extract all the moments present in the expression
                 # containedMoments = getMomentsInExpression(dfMdt)
                 singleMoments = getSingleMomentsInExpression(dfMdt)
-                debug("dfMdt=%s" %(dfMdt)) #debug
-                # debug("containedMoments=%s" %(containedMoments)) #debug
-                debug("singleMoments=%s" %(singleMoments)) #debug
+                # debug("dfMdt=%s" %(dfMdt)) #debug
+                # debug("singleMoments=%s" %(singleMoments)) #debug
                 if len(singleMoments) > 0: # Only do this if there is any moment to differentiate
                     momentsList = list(singleMoments)
                     # Then we need to substitute them with dummy variables, so that
@@ -1370,26 +1379,27 @@ def get_dfMdt(transition_classes, fM, D, order=2,
                     _varList = [ _x[i] for i,M in enumerate(momentsList) ]
                     dfMdt = dfMdt.subs(_subs)
                     # Now we perform the Taylor expansion
-                    dfMdt = _multivariateTaylor(
+                    dfMdt = _multivariateTaylor( #Expensive!
                                 dfMdt,
                                 _varList,
                                 [ Expectation(z) for z in _varList ],
                                 orderW,
-                                ).factor()
+                                )
+                    # dfMdt = dfMdt.factor()
                     # And finally we substitute the Moments back into the expression
                     _reverseSubs = [ (_x[i], M) for i,M in enumerate(momentsList) ]
                     dfMdt = dfMdt.subs(_reverseSubs)
                     _reverseEsubs = [ (_Ex[i], Expectation(M)) for i,M in enumerate(momentsList) ]
                     dfMdt = dfMdt.subs(_reverseEsubs)
 
-                debug("Expansion(dfMdt)=%s" %(dfMdt)) #debug
+                # debug("Expansion(dfMdt)=%s" %(dfMdt)) #debug
             #
             else:
                 l_n_Xc = contextFun * contentFun
-                debug("%s[%d]: %s" %(fM, q, l_n_Xc)) #debug
+                # debug("%s[%d]: %s" %(fM, q, l_n_Xc)) #debug
                 dfMdt = get_dfMdt_contrib(reactants, l_n_Xc, D, 
                         clna=clna, boolean_variables=boolean_variables)
-                debug("%s[%d]: %s" %(fM, q, dfMdt)), #debug
+                # debug("%s[%d]: %s" %(fM, q, dfMdt)), #debug
             contrib.append(dfMdt)
     return Add(*contrib)
 
@@ -1496,6 +1506,7 @@ def compute_moment_equations(transition_classes, moments,
                                 order=2,
                                 clna=False,
                                 boolean_variables=set(),
+                                simplify_equations=False,
                                 ):
     """
     Given a reaction network, moment expressions, and number of species, computes
@@ -1508,8 +1519,10 @@ def compute_moment_equations(transition_classes, moments,
     :param D: optionally, the number of species
     :return: list of pairs (fM, dfMdt)
     """
-    info("> Compute Moment Equations: computing equations for %d moments" %(len(moments)))
     debug("> Compute Moment Equations: moments=%s" %(moments))
+    info("> Compute Moment Equations: computing equations for %d moments" %(len(moments)), 
+        end="", flush=True)
+    t0 = time()
     D = _getAndVerifyNumSpecies(transition_classes, moments, D)
     equations = list()
     required = set()
@@ -1526,7 +1539,11 @@ def compute_moment_equations(transition_classes, moments,
                             )
         dfMdt = dfMdt.expand().subs(substitutions)
         EdfMdt = _expectation(dfMdt).expand()
+        if simplify_equations:
+            EdfMdt = EdfMdt.simplify()
         equations.append(( fM, EdfMdt ))
+    dt = time() - t0
+    info(" [%s]" %(str(timedelta(seconds=dt))))
     return equations
 
 

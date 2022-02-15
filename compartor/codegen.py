@@ -1,8 +1,12 @@
 from sympy import Add, Mul, Pow, Number, Symbol, simplify, Function
 from compartor.compartments import Moment, Expectation
 from sys import stderr
+from compartor.compartments import debug, info, warn, error
 
-from sympy import poly, horner # For horner scheme poly evaluation
+from sympy import poly, horner, PolynomialError, GeneratorsNeeded # For horner scheme poly evaluation
+
+from time import time
+from datetime import timedelta
 
 import itertools
 import collections
@@ -220,7 +224,7 @@ class _expr_function:
 
 # -------------------------------------------------
 class AbstractCodeGenerator:
-    def __init__(self):
+    def __init__(self, horner=False):
         self._code = ''
         self._indent = 0
         self.cr = '\n'
@@ -246,6 +250,9 @@ class AbstractCodeGenerator:
         # whether the generated code should include comments above dM[i] = ... expressions
         # about which moment M[i] corresponds to
         self.gen_moment_comments = True
+
+        # Switch to choose if to use the Horner scheme
+        self.horner = horner
 
     def gen_M(self, expr):
         """
@@ -424,16 +431,40 @@ class AbstractCodeGenerator:
             self._moment_initializers = self.moment_initializers
 
     def gen_ODEs_body(self, equations):
+        info("> Generating ODE body...")
         for k, v in self._constant_initializers.items():
             self.append_statement(f'{self.gen_constant(k)} = {v}')
 
-        for fM, dfMdt in equations:
+        generators = [ Expectation(fM) for fM, _ in equations ]
+
+        for i, (fM, dfMdt) in enumerate(equations):
             # c = gen_comment_text(fM)
             # self.append_statement(f'# {"???" if c is None else c}')
             # c = self._gen_code_expr(simplify(dfMdt)).code()
-            H = horner(poly(dfMdt.expand()))
-            c = self._gen_code_expr(H).code()
+            info(">> (%d) Generating RHS code for %s..." %(i+1, fM))
+            RHS = dfMdt
+            if self.horner:
+                info(">>> Applying Horner to RHS...", end="", flush=True)
+                t0 = time()
+                try:
+                    H = horner(dfMdt, *generators)
+                    dt = time() - t0
+                    info(" [%s]" %(str(timedelta(seconds=dt))))
+                    debug(">>> Horner = %s" %(H))
+                    RHS = H
+                except (PolynomialError, GeneratorsNeeded) as ex:
+                    dt = time() - t0
+                    info(" [%s]" %(str(timedelta(seconds=dt))))
+                    warn(">>> WARNING: Horner scheme could not be applied to equation of %s, exception=%s" %(fM, ex))
+            
+            info(">>> Generating RHS code...", end="", flush=True)
+            t0 = time()
+            c = self._gen_code_expr(RHS).code()
             c = c.replace("-1*", "-")
+            dt = time() - t0
+            info(" [%s]" %(str(timedelta(seconds=dt))))
+
+            info(">>> Generating RHS comments...", flush=True)
             comment = _gen_comment_text(fM)
             if self.gen_moment_comments and comment:
                 self.append_comment(comment)
@@ -454,8 +485,8 @@ class AbstractCodeGenerator:
 
 # -------------------------------------------------
 class GenerateJulia(AbstractCodeGenerator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, horner=False):
+        super().__init__(horner=horner)
         self.index_base = 1
 
     def format_comment(self, text):
@@ -497,8 +528,8 @@ class GenerateJulia(AbstractCodeGenerator):
 
 
 # -------------------------------------------------
-def generate_julia_code(equations, function_name = "generated"):
-    generator = GenerateJulia()
+def generate_julia_code(equations, function_name = "generated", horner=False):
+    generator = GenerateJulia(horner=horner)
     code = generator.generate(equations, function_name=function_name)
     return code
 
