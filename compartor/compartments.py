@@ -28,7 +28,6 @@ def error(*args, **kwargs):
     raise RuntimeError("ERROR!")
 
 
-
 ###################################################
 #
 # Specifying transitions
@@ -303,35 +302,6 @@ class OutcomeDistribution(object):
             return a
 
         return OutcomeDistribution(symbol, expectation)
-
-    @classmethod
-    def Binomial(cls, symbol, y, n, p):
-        """
-        Returns an OutcomeDistribution that is a Binomial distribution
-
-        :param symbol: symbol to use when displaying Pi_c in equations
-        :param y: random variable, entry in a content variable, e.g., y[0]
-        :param n: number parameter of the Binomial distribution
-        :param p: success probability of the Binomial distribution.
-        :return Pi_c:
-        """
-        from sympy.stats import Binomial, E
-        from sympy import Sum
-        def expectation(pDMcj):
-            binomial = Binomial('binomial', n, p)
-            exp = E(pDMcj.subs(y, binomial))
-            # def _bin(n,k):
-            #     return factorial(n) / ( factorial(k)*factorial(n-k) )
-            # exp = Sum(
-            #             pDMcj * p**y * (1-p)**(n-y) * _bin(n,y),
-            #             (y, 0, n)
-            #             ).doit()
-            # exp /= n+1
-            # debug(">> Binomial: exp = %s" %(exp)) #debug
-            return exp
-
-        return OutcomeDistribution(symbol, expectation)
-
 
 ###################################################
 #
@@ -870,13 +840,12 @@ def __getKnownMomentSubstitution(moment):
     _x = Content('_x')
     k = __getKernel(moment, _x)
 
-def __getKnownMomentsSubstitutions(known_moments):
-    blabla
+# def __getKnownMomentsSubstitutions(known_moments):
+#     blabla
 
 # -------------------------------------------------
 def __extractMonomials(expr):
-    # expr = expr.factor().expand() # Slow factor()
-    expr = expr.expand() # Faster, and it should be same result
+    expr = expr.expand()
     monomials = list(expr.args) if expr.func == Add else [expr]
     return monomials
 
@@ -947,7 +916,6 @@ def __extractMoment2(monomial, x, y, D):
 
 def getMomentsInExpression(expr):
     monomials = decomposeMomentsPolynomial(expr, strict=False)
-    # debug("getMomentsInExpression: expr=%s, monomials=%s" %(expr, monomials))
     moments = set()
     for (k, M, DM) in monomials:
         if M != 1:
@@ -1028,7 +996,6 @@ def __decomposeContentPolynomial(expr, x, D, order=2, boolean_variables=set(), l
     """
     if lpac:
         expr = _expandContentFunction(expr, D, order=order, boolean_variables=boolean_variables, lpPower=lpPower)
-        # expr = expr.factor()
     monomials = __extractMonomials(expr)
     result = list()
     for monomial in monomials:
@@ -1051,7 +1018,6 @@ def __decomposeContentPolynomial2(expr, x, y, D, order=2, boolean_variables=set(
     
     if lpac:
         expr = _expandContentFunction(expr, D, order=2, boolean_variables=boolean_variables, lpPower=lpPower)
-        # expr = expr.factor()
     monomials = __extractMonomials(expr)
     result = list()
     for monomial in monomials:
@@ -1121,7 +1087,6 @@ def _sanitizeMonomialsForBooleans(monomials, boolean_variables):
     return monomials
 
 def _areBooleansInvolved(alpha, beta, boolean_variables):
-    # print("CHECK BOOLS: alpha=%s, beta=%s, boolean_variables=%s"%(alpha, beta, boolean_variables), file=stderr) #debug
     for i in boolean_variables:
         if alpha[i]>0 or beta[i]>0:
             error("BOOLEANS INVOLVED! alpha=%s, beta=%s"%(alpha, beta)) #debug
@@ -1131,7 +1096,6 @@ def _areBooleansInvolved(alpha, beta, boolean_variables):
 # -------------------------------------------------
 def _getGradient(cf, D, Vars):
     return [ cf.diff(v[i]) for i in range(D) for v in Vars ]
-    # return [ cf.diff(v[i]).subs(KroneckerDelta(1,v[1]),1).simplify() for i in range(D) for v in Vars ]
 
 def _evaluateMultidim(expr, D, Vars, linearizationPoint):
     e = expr
@@ -1152,15 +1116,10 @@ def _getExpansionPoint(D, boolean_variables, order=1):
             exponent = ( *( (0,)*i ), order, *( (0,)*(D-i-1) ) )
             Mi = M(*exponent)
             linearizationPoint = E(Mi) / E(N)
-            # Test approximation on linearizing fractional moments
-            # linearizationPoint = Mi / N #Ehm...
-            # linearizationPoint += E(Mi)*E(N**2) / E(N)**3
-            # linearizationPoint -= E(Mi*N) / E(N)**2
         lp.append(linearizationPoint)
     return lp
 
 def _linearizeContentFunction(cf, D, boolean_variables=set(), ignored_symbols=set(), order=1):
-    # print("> cf = %s" %(cf), file=stderr) #debug
     Vars = _getContentVars(cf).difference(ignored_symbols)
     if len(Vars)==0:
         return cf
