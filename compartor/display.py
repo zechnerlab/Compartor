@@ -74,6 +74,8 @@ def display_moment_equations(equations, print_missing=True):
             display(Markdown('**The system is not closed!** Moment equations are missing for:'))
             display(missing)
 
+def display_bulk_equations(equations):
+    return display_moment_equations(equations, print_missing=False)
 
 # -------------------------------------------------
 def display_closures(closures):

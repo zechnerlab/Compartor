@@ -1,5 +1,5 @@
 from sympy import Add, Mul, Pow, Number, Symbol, simplify, Function
-from compartor.compartments import Moment, Expectation
+from compartor.compartments import Moment, Bulk, Expectation
 from sys import stderr
 from compartor.compartments import debug, info, warn, error
 
@@ -340,7 +340,7 @@ class AbstractCodeGenerator:
             # return _expr_mul(*[self._gen_code_expr(i) for i in expr.args])
         elif expr.func == Pow:
             return _expr_pow(self._gen_code_expr(expr.args[0]), self._gen_code_expr(expr.args[1]), self)
-        elif expr.func == Moment:
+        elif expr.func in [Moment, Bulk]:
             return _expr_atom(self.gen_M(expr))
         elif expr.func == Expectation:
             return _expr_atom(self.gen_M(expr.args[0]))
@@ -366,7 +366,7 @@ class AbstractCodeGenerator:
                 return set(itertools.chain(*(dependencies(arg) for arg in expr.args)))
             elif expr.func == Pow:
                 return dependencies(expr.args[0])
-            elif expr.func == Moment:
+            elif expr.func in [Moment, Bulk]:
                 return {expr}
             elif issubclass(expr.func, Number):
                 return {}
@@ -406,7 +406,7 @@ class AbstractCodeGenerator:
         return {constant: '??? ' + self.format_comment(f'{constant}, please specify!') for constant in constants}
 
     def _default_moment_initializers(self, equations):
-        moments = [fM for fM, dfMdt in equations if fM.func is Moment]
+        moments = [ fM for fM, dfMdt in equations if fM.func in [Moment, Bulk] ]
         return {moment: '??? ' + self.format_comment(f'initial value for {moment}, please specify!') for moment in moments}
 
     def _init_dictionaries(self, equations):
@@ -459,7 +459,7 @@ class AbstractCodeGenerator:
             
             info(">>> Generating RHS code...", end="", flush=True)
             t0 = time()
-            c = self._gen_code_expr(RHS).code()
+            c = self._gen_code_expr(RHS).code() #HERE
             c = c.replace("-1*", "-")
             dt = time() - t0
             info(" [%s]" %(str(timedelta(seconds=dt))))
@@ -477,7 +477,7 @@ class AbstractCodeGenerator:
             comment = _gen_comment_text(expr)
             if self.gen_moment_comments and comment:
                 self.append_comment(comment)
-            if expr.func is Moment:
+            if expr.func in [Moment, Bulk]:
                 self.append_statement(f'{self.gen_M(expr)} = {self._moment_initializers[expr]}')
             else:
                 self.append_statement(f'{self.gen_M(expr)} = {self._gen_code_expr(expr).code()}')

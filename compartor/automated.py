@@ -1,5 +1,5 @@
 from compartor.closure import apply_substitutions, gamma_closures, substitute_closures, __getMomentPowers, meanfield_closures
-from compartor.compartments import Moment, Expectation, compute_moment_equations, get_missing_moments, _getAndVerifyNumSpecies, _getNumSpecies, getKnownMoments
+from compartor.compartments import Moment, Bulk, Expectation, compute_moment_equations, get_missing_moments, _getAndVerifyNumSpecies, _getNumSpecies, getKnownMoments
 from compartor.compartments import debug, info, warn, error
 from sys import stderr
 
@@ -17,12 +17,15 @@ def automated_moment_equations(D, transition_classes,
                                 moments=None, 
                                 display_details=True, details=None,
                                 custom_closures=[], custom_substitutions=[],
-                                clna=False,
+                                lpac=False,
                                 order=2,
+                                orderW=2,
                                 boolean_variables=set(),
                                 known_moments=set(),
                                 apply_closures=False,
                                 simplify_equations=False,
+                                bulk_equations=list(),
+                                one_round=False,
                                 ):
     """
     Outputs a closed system of moment equations for the provided transition classes.
@@ -48,20 +51,25 @@ def automated_moment_equations(D, transition_classes,
     D = _getAndVerifyNumSpecies(transition_classes, moments, D)
     desired = moments.copy()
     added = []
-    equations = list()
+    equations = bulk_equations.copy()
     curMoments = moments
     t0 = time()
     while True:
         curEquations = compute_moment_equations(transition_classes, curMoments,
                                             substitutions=custom_substitutions, 
-                                            clna=clna,
+                                            lpac=lpac,
                                             D=D,
                                             order=order,
+                                            orderW=orderW,
                                             boolean_variables=boolean_variables,
                                             simplify_equations=simplify_equations,
                                             )
         equations.extend(curEquations)
-        missing = get_missing_moments(curEquations, known_moments=moments)
+        missing = get_missing_moments(curEquations+bulk_equations, known_moments=moments)
+        debug(">>> moments = %s" %(moments)) #debug
+        debug(">>> missing = %s" %(missing)) #debug
+        if one_round:
+            return equations
         gamma = []
         meanfield = []
         if missing:
@@ -105,6 +113,8 @@ def automated_moment_equations(D, transition_classes,
         return equations
 
 def _worth_adding(expr, order=3, rc=2):
+    if expr.func == Bulk:
+        return False
     moment_powers = __getMomentPowers(expr)
     # sort by ascending pow
     moment_powers = sorted(moment_powers, key=lambda x: x[1])
