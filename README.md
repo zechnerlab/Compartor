@@ -15,6 +15,8 @@ Install with `pip`
 pip install compartor
 ```
 
+Please that the LPAC-related notebooks use the local copy of compartor in the repository, as the pip package is (temporarily) still on version 1.1.1.
+
 
 ## Getting started
 
