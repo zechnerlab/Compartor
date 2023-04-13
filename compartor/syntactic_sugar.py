@@ -1,4 +1,5 @@
 from compartor.compartments import Content, ContentChange, Compartment, Transition
+from compartor.compartments import Moment, Bulk
 from sympy import EmptySet, Add
 
 
@@ -34,20 +35,34 @@ def _parse_content(expr):
     else:
         return Compartment(expr)
 
+def _parse_bulk(expr):
+    pass
 
 def _parse(expr):
     if expr is EmptySet:
-        return EmptySet
+        return EmptySet, False
     elif type(expr) in [tuple, dict] and len(expr) == 0:
-        return EmptySet
+        return EmptySet, False
     elif type(expr) is list:
-        return Add(*[_parse_content(c) for c in expr])
+        return Add(*[_parse_content(c) for c in expr]), False
+    elif type(expr) is set: # {x} bulk syntax
+        return Add(*[_parse_content(c) for c in expr]), True
+    # elif expr.func in [Moment,Add]:
+    #     return expr, True
     else:
         raise TypeError("Unexpected:" + str(expr))
 
 
 def _make_transition(reactants, products):
-    return Transition(_parse(reactants), _parse(products))
+    R, isBulkR = _parse(reactants)
+    P, isBulkP = _parse(products)
+    if not isBulkR and not isBulkP:
+        return Transition(R, P)
+    elif isBulkR and isBulkP:
+        return Transition(R, P, isBulk=True)
+    else:
+        raise TypeError("Transition must be either Compartmental or Bulk, not mixed!")
+    return None
 
 
 to = _Infix(_make_transition)

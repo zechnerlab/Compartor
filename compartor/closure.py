@@ -18,6 +18,8 @@ def __getMomentPowers(expr):
         return [(expr.args[0], expr.args[1])]
     elif expr.func == Moment:
         return [(expr, 1)]
+    elif expr.is_number: #test
+        return [] #test
     else:
         raise TypeError("Unexpected expression " + str(expr))
 
@@ -155,5 +157,21 @@ def substitute_closures(equations, closures):
     :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by substituting closed moments into dfMdt
     """
     substitutions = {Expectation(m): c for m, c in closures}
+    # print("Closures: %s" %(substitutions)) #debug
     closed_equations = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in equations]
     return closed_equations
+
+def apply_substitutions(equations, substitutions):
+    """
+    Perform raw term substitutions.
+
+    :param equations: list of pairs (fM, dfMdt). (as returned by compute_moment_equations)
+    :param substitution: list of tuples of (expr, substitution(expr))
+    :return: list of pairs (fM, dfMdt'), where dfMdt' is obtained by substituting closed moments into dfMdt
+    """
+    substitutions = {m: c for m, c in substitutions}
+    # print("Substitutions: %s" %(substitutions)) #debug
+    subs_equations = [(fM, dfMdt.subs(substitutions)) for fM, dfMdt in equations]
+    return subs_equations
+
+#eof

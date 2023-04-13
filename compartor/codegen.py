@@ -1,5 +1,12 @@
-from sympy import Add, Mul, Pow, Number, Symbol, simplify
-from compartor.compartments import Moment, Expectation
+from sympy import Add, Mul, Pow, Number, Symbol, simplify, Function
+from compartor.compartments import Moment, Bulk, Expectation
+from sys import stderr
+from compartor.compartments import debug, info, warn, error
+
+from sympy import poly, horner, PolynomialError, GeneratorsNeeded # For horner scheme poly evaluation
+
+from time import time
+from datetime import timedelta
 
 import itertools
 import collections
@@ -10,10 +17,21 @@ import collections
 def _get_constants(expr):
     if isinstance(expr, collections.abc.Iterable): # assuming it is an iterable of (fM, dfMdt) tuples
         return set(itertools.chain(*(_get_constants(dfMdt) for _, dfMdt in expr)))
+    # elif expr.func == Mul and expr.args[1].func == Pow \
+    #         and expr.args[1].args[0].func == Expectation \
+    #         and expr.args[1].args[1] == -1:
+    #     # Now let's try to catch the linearization points!
+    #     return {expr}
     elif expr.func in [Add, Mul, Pow, Expectation]:
         return set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
     elif expr.func == Moment or issubclass(expr.func, Number):
         return {}
+    elif issubclass(expr.func, Function): # This has to be after Moment!
+        # print("Expr: %s" %(expr), file=stderr)
+        # print("Args: %s" %(expr.args), file=stderr)
+        # res = set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
+        # print(res, file=stderr) #debug
+        return set(itertools.chain(*(_get_constants(arg) for arg in expr.args)))
     else:
         return {expr}
 
@@ -188,10 +206,25 @@ class _expr_pow:
                 return c
         return self.generator.format_pow(paren(self.base), paren(self.exponent))
 
+class _expr_function:
+    def __init__(self, function, args):
+        self.function = function
+        self.args = args
+
+    def code(self):
+        nargs = len(self.args)
+        f = repr(self.function)
+        c = f'{f}('
+        for (i,arg) in enumerate(self.args):
+            c += arg.code()
+            if i < nargs-1:
+                c += ', '
+        c += ')'
+        return c
 
 # -------------------------------------------------
 class AbstractCodeGenerator:
-    def __init__(self):
+    def __init__(self, horner=False):
         self._code = ''
         self._indent = 0
         self.cr = '\n'
@@ -217,6 +250,9 @@ class AbstractCodeGenerator:
         # whether the generated code should include comments above dM[i] = ... expressions
         # about which moment M[i] corresponds to
         self.gen_moment_comments = True
+
+        # Switch to choose if to use the Horner scheme
+        self.horner = horner
 
     def gen_M(self, expr):
         """
@@ -304,12 +340,14 @@ class AbstractCodeGenerator:
             # return _expr_mul(*[self._gen_code_expr(i) for i in expr.args])
         elif expr.func == Pow:
             return _expr_pow(self._gen_code_expr(expr.args[0]), self._gen_code_expr(expr.args[1]), self)
-        elif expr.func == Moment:
+        elif expr.func in [Moment, Bulk]:
             return _expr_atom(self.gen_M(expr))
         elif expr.func == Expectation:
             return _expr_atom(self.gen_M(expr.args[0]))
         elif issubclass(expr.func, Number):
             return _expr_atom(expr)
+        elif issubclass(expr.func, Function):
+            return _expr_function(expr.func, [ self._gen_code_expr(x) for x in expr.args ])
         else:
             return _expr_atom(self.gen_constant(expr))
 
@@ -328,7 +366,7 @@ class AbstractCodeGenerator:
                 return set(itertools.chain(*(dependencies(arg) for arg in expr.args)))
             elif expr.func == Pow:
                 return dependencies(expr.args[0])
-            elif expr.func == Moment:
+            elif expr.func in [Moment, Bulk]:
                 return {expr}
             elif issubclass(expr.func, Number):
                 return {}
@@ -361,13 +399,14 @@ class AbstractCodeGenerator:
     def _default_constant_variables(self, equations):
         constants = _get_constants(equations)
         return {constant: f'c{i}' for i, constant in enumerate(constants)}
+        # return {constant: f'{str(constant)}' for i, constant in enumerate(constants)}
 
     def _default_constant_initializers(self, equations):
         constants = _get_constants(equations)
         return {constant: '??? ' + self.format_comment(f'{constant}, please specify!') for constant in constants}
 
     def _default_moment_initializers(self, equations):
-        moments = [fM for fM, dfMdt in equations if fM.func is Moment]
+        moments = [ fM for fM, dfMdt in equations if fM.func in [Moment, Bulk] ]
         return {moment: '??? ' + self.format_comment(f'initial value for {moment}, please specify!') for moment in moments}
 
     def _init_dictionaries(self, equations):
@@ -392,14 +431,40 @@ class AbstractCodeGenerator:
             self._moment_initializers = self.moment_initializers
 
     def gen_ODEs_body(self, equations):
+        info("> Generating ODE body...")
         for k, v in self._constant_initializers.items():
             self.append_statement(f'{self.gen_constant(k)} = {v}')
 
-        for fM, dfMdt in equations:
+        generators = [ Expectation(fM) for fM, _ in equations ]
+
+        for i, (fM, dfMdt) in enumerate(equations):
             # c = gen_comment_text(fM)
             # self.append_statement(f'# {"???" if c is None else c}')
-            c = self._gen_code_expr(simplify(dfMdt)).code()
+            # c = self._gen_code_expr(simplify(dfMdt)).code()
+            info(">> (%d) Generating RHS code for %s..." %(i+1, fM))
+            RHS = dfMdt
+            if self.horner:
+                info(">>> Applying Horner to RHS...", end="", flush=True)
+                t0 = time()
+                try:
+                    H = horner(dfMdt, *generators)
+                    dt = time() - t0
+                    info(" [%s]" %(str(timedelta(seconds=dt))))
+                    debug(">>> Horner = %s" %(H))
+                    RHS = H
+                except (PolynomialError, GeneratorsNeeded) as ex:
+                    dt = time() - t0
+                    info(" [%s]" %(str(timedelta(seconds=dt))))
+                    warn(">>> WARNING: Horner scheme could not be applied to equation of %s, exception=%s" %(fM, ex))
+            
+            info(">>> Generating RHS code...", end="", flush=True)
+            t0 = time()
+            c = self._gen_code_expr(RHS).code() #HERE
             c = c.replace("-1*", "-")
+            dt = time() - t0
+            info(" [%s]" %(str(timedelta(seconds=dt))))
+
+            info(">>> Generating RHS comments...", flush=True)
             comment = _gen_comment_text(fM)
             if self.gen_moment_comments and comment:
                 self.append_comment(comment)
@@ -412,7 +477,7 @@ class AbstractCodeGenerator:
             comment = _gen_comment_text(expr)
             if self.gen_moment_comments and comment:
                 self.append_comment(comment)
-            if expr.func is Moment:
+            if expr.func in [Moment, Bulk]:
                 self.append_statement(f'{self.gen_M(expr)} = {self._moment_initializers[expr]}')
             else:
                 self.append_statement(f'{self.gen_M(expr)} = {self._gen_code_expr(expr).code()}')
@@ -420,15 +485,23 @@ class AbstractCodeGenerator:
 
 # -------------------------------------------------
 class GenerateJulia(AbstractCodeGenerator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, horner=False):
+        super().__init__(horner=horner)
         self.index_base = 1
 
     def format_comment(self, text):
         return f'# {text}'
 
     def format_pow(self, base, exp):
-        return f'{base}^{exp}'
+        return f'(({base})^({exp}))'
+
+    def _default_constant_initializers(self, equations):
+        key = lambda x: str(x) # Use lexicographic ordering
+        constants = sorted(_get_constants(equations), key=key)
+        return collections.OrderedDict(
+            ( constant, f'parameters[:{ str(constant).replace("_","") }] ' 
+                + self.format_comment(f'{ str(constant).replace("_","") }'))
+            for i, constant in enumerate(constants) )
 
     def generate(self, equations, function_name = "generated"):
         self._init_dictionaries(equations)
@@ -445,7 +518,7 @@ class GenerateJulia(AbstractCodeGenerator):
         self.append_comment("initialize expected moments vector")
         self.append_statement(f'function {function_name}_initial(n0)')
         self.indent(2)
-        self.append_statement(f'M=zeros[{len(equations)}]')
+        self.append_statement(f'M = zeros({len(equations)})')
         self.gen_initial_body(equations)
         self.append_statement("return M")
         self.indent(-2)
@@ -455,8 +528,8 @@ class GenerateJulia(AbstractCodeGenerator):
 
 
 # -------------------------------------------------
-def generate_julia_code(equations, function_name = "generated"):
-    generator = GenerateJulia()
+def generate_julia_code(equations, function_name = "generated", horner=False):
+    generator = GenerateJulia(horner=horner)
     code = generator.generate(equations, function_name=function_name)
     return code
 
