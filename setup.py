@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='compartor',
-    version='1.1.1',
+    version='1.2.0',
     packages=['compartor'],
     url='http://github.com/zechnerlab/Compartor',
     license='Simplified BSD License',
